@@ -10,12 +10,14 @@ import { Slider } from "@/components/ui/slider";
 import { Rat, CoatType, CoatTexture, Marking, EyeColor, EarType } from "@/types/rat";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
+import { ratColorDatabase } from "@/data/ratColors";
 
 interface AddRatDialogProps {
   onAddRat: (rat: Rat) => void;
+  allRats: Rat[];
 }
 
-export function AddRatDialog({ onAddRat }: AddRatDialogProps) {
+export function AddRatDialog({ onAddRat, allRats }: AddRatDialogProps) {
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -203,12 +205,37 @@ export function AddRatDialog({ onAddRat }: AddRatDialogProps) {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="coatColor">Cor da Pelagem *</Label>
-                <Input
-                  id="coatColor"
-                  value={formData.coatColor}
-                  onChange={(e) => setFormData({ ...formData, coatColor: e.target.value })}
-                  placeholder="Ex: Agouti, Blue, Champagne"
-                />
+                <Select 
+                  value={formData.coatColor} 
+                  onValueChange={(value) => {
+                    const selectedColor = ratColorDatabase
+                      .flatMap(group => group.colors)
+                      .find(c => c.name === value);
+                    setFormData({ 
+                      ...formData, 
+                      coatColor: value,
+                      genotype: selectedColor?.genotype || formData.genotype
+                    });
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a cor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ratColorDatabase.map(group => (
+                      <div key={group.group}>
+                        <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground">
+                          {group.group}
+                        </div>
+                        {group.colors.map(color => (
+                          <SelectItem key={color.name} value={color.name}>
+                            {color.name}
+                          </SelectItem>
+                        ))}
+                      </div>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="marking">Marcação</Label>
@@ -263,7 +290,14 @@ export function AddRatDialog({ onAddRat }: AddRatDialogProps) {
             <h3 className="font-semibold text-lg border-b pb-2">Genética e Reprodução</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="genotype">Genótipo</Label>
+                <Label htmlFor="genotype">
+                  Genótipo
+                  {formData.coatColor && (
+                    <span className="text-xs text-muted-foreground ml-2">
+                      (Auto-preenchido)
+                    </span>
+                  )}
+                </Label>
                 <Input
                   id="genotype"
                   value={formData.genotype}

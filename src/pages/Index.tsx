@@ -3,6 +3,7 @@ import { Rat } from "@/types/rat";
 import { RatCard } from "@/components/RatCard";
 import { AddRatDialog } from "@/components/AddRatDialog";
 import { RatDetailsDialog } from "@/components/RatDetailsDialog";
+import { BreedingSimulator } from "@/components/BreedingSimulator";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, Filter } from "lucide-react";
@@ -115,7 +116,8 @@ const Index = () => {
                 <SelectItem value="not-approved">Não Reprodutores</SelectItem>
               </SelectContent>
             </Select>
-            <AddRatDialog onAddRat={handleAddRat} />
+            <BreedingSimulator rats={rats} />
+            <AddRatDialog onAddRat={handleAddRat} allRats={rats} />
           </div>
         </div>
 
@@ -138,7 +140,7 @@ const Index = () => {
                 : "Nenhum rato cadastrado ainda"}
             </p>
             {!searchTerm && filterSex === "all" && filterBreeding === "all" && (
-              <AddRatDialog onAddRat={handleAddRat} />
+              <AddRatDialog onAddRat={handleAddRat} allRats={rats} />
             )}
           </div>
         )}
