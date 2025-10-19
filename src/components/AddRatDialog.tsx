@@ -28,6 +28,8 @@ export function AddRatDialog({ onAddRat, allRats }: AddRatDialogProps) {
     status: "Vivo" as RatStatus,
     destination: "Reprodução" as RatDestination,
     isBreeder: false,
+    motherId: "",
+    fatherId: "",
     coatType: "Standard" as CoatType,
     coatColor: "",
     marking: "Self" as Marking,
@@ -70,6 +72,8 @@ export function AddRatDialog({ onAddRat, allRats }: AddRatDialogProps) {
       status: formData.status,
       destination: formData.destination,
       isBreeder: formData.isBreeder,
+      motherId: formData.motherId || undefined,
+      fatherId: formData.fatherId || undefined,
       coatType: formData.coatType,
       coatColor: formData.coatColor,
       marking: formData.marking,
@@ -110,6 +114,8 @@ export function AddRatDialog({ onAddRat, allRats }: AddRatDialogProps) {
       status: "Vivo",
       destination: "Reprodução",
       isBreeder: false,
+      motherId: "",
+      fatherId: "",
       coatType: "Standard",
       coatColor: "",
       marking: "Self",
@@ -250,6 +256,41 @@ export function AddRatDialog({ onAddRat, allRats }: AddRatDialogProps) {
                   checked={formData.isBreeder}
                   onCheckedChange={(checked) => setFormData({ ...formData, isBreeder: checked })}
                 />
+              </div>
+            </div>
+          </div>
+
+          {/* Pedigree */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-lg border-b pb-2">Pedigree</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="mother">Mãe</Label>
+                <Select value={formData.motherId} onValueChange={(value) => setFormData({ ...formData, motherId: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Desconhecido" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Desconhecido</SelectItem>
+                    {allRats.filter(r => r.sex === "Fêmea").map(r => (
+                      <SelectItem key={r.id} value={r.id}>{r.name} - {r.coatColor}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="father">Pai</Label>
+                <Select value={formData.fatherId} onValueChange={(value) => setFormData({ ...formData, fatherId: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Desconhecido" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Desconhecido</SelectItem>
+                    {allRats.filter(r => r.sex === "Macho").map(r => (
+                      <SelectItem key={r.id} value={r.id}>{r.name} - {r.coatColor}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </div>

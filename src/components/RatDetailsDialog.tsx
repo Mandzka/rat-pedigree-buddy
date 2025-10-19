@@ -1,17 +1,21 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Rat } from "@/types/rat";
 import { formatAge } from "@/utils/ageCalculator";
-import { Calendar, Heart, Star, Dna, Activity } from "lucide-react";
+import { Calendar, Heart, Star, Dna, Activity, Edit } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { PedigreeTree } from "./PedigreeTree";
 
 interface RatDetailsDialogProps {
   rat: Rat | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onEdit: (rat: Rat) => void;
+  allRats: Rat[];
 }
 
-export function RatDetailsDialog({ rat, open, onOpenChange }: RatDetailsDialogProps) {
+export function RatDetailsDialog({ rat, open, onOpenChange, onEdit, allRats }: RatDetailsDialogProps) {
   if (!rat) return null;
 
   const temperamentScores = rat.temperamentScores;
@@ -20,15 +24,24 @@ export function RatDetailsDialog({ rat, open, onOpenChange }: RatDetailsDialogPr
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-2xl flex items-center gap-2">
-            {rat.name}
-            {rat.breedingApproved && (
-              <Badge className="bg-gradient-to-r from-primary to-accent border-0">
-                <Heart className="w-3 h-3 mr-1" />
-                Reprodutor
-              </Badge>
-            )}
-          </DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="text-2xl flex items-center gap-2">
+              {rat.name}
+              {rat.breedingApproved && (
+                <Badge className="bg-gradient-to-r from-primary to-accent border-0">
+                  <Heart className="w-3 h-3 mr-1" />
+                  Reprodutor
+                </Badge>
+              )}
+            </DialogTitle>
+            <div className="flex gap-2">
+              <PedigreeTree rat={rat} allRats={allRats} />
+              <Button variant="outline" size="sm" onClick={() => onEdit(rat)}>
+                <Edit className="w-4 h-4 mr-2" />
+                Editar
+              </Button>
+            </div>
+          </div>
         </DialogHeader>
 
         <div className="space-y-6">

@@ -4,10 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Rat } from "@/types/rat";
 import { simulateBreeding } from "@/utils/inbreedingCalculator";
 import { simulateGenotypes, GenotypeOutcome } from "@/utils/genotypeSimulator";
-import { AlertTriangle, Heart, Sparkles } from "lucide-react";
+import { getTraitSummary } from "@/utils/fullGeneticSimulator";
+import { AlertTriangle, Heart, Sparkles, Eye, Ear, Palette, TestTube } from "lucide-react";
 
 interface BreedingSimulatorProps {
   rats: Rat[];
@@ -22,6 +24,7 @@ export function BreedingSimulator({ rats }: BreedingSimulatorProps) {
     relationship: string;
     warning?: string;
     genotypes: GenotypeOutcome[];
+    traitSummary?: ReturnType<typeof getTraitSummary>;
   } | null>(null);
 
   const females = rats.filter(r => r.sex === "Fêmea");
@@ -42,11 +45,14 @@ export function BreedingSimulator({ rats }: BreedingSimulatorProps) {
       father.genotype || ""
     );
 
+    const traitSummary = getTraitSummary(mother, father);
+
     setResults({
       coi: breedingResult.estimatedCOI,
       relationship: breedingResult.relationshipType,
       warning: breedingResult.warning,
       genotypes: genotypeResults,
+      traitSummary,
     });
   };
 
@@ -175,49 +181,202 @@ export function BreedingSimulator({ rats }: BreedingSimulatorProps) {
                 </CardContent>
               </Card>
 
-              {/* Genotype Outcomes */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Possíveis Resultados de Cores</CardTitle>
-                  <CardDescription>
-                    Baseado nos genótipos dos pais
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {results.genotypes.length > 0 ? (
-                    <div className="space-y-3">
-                      {results.genotypes.map((outcome, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
-                        >
-                          <div className="flex-1">
-                            <p className="font-medium">{outcome.phenotype}</p>
-                            <p className="text-sm text-muted-foreground">
-                              Genótipo: {outcome.genotype}
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-2xl font-bold text-primary">
-                              {outcome.probability}%
-                            </p>
-                            <div className="w-24 bg-background rounded-full h-2 mt-1">
-                              <div
-                                className="h-full bg-primary rounded-full transition-all"
-                                style={{ width: `${outcome.probability}%` }}
-                              />
+              {/* Genetic Outcomes Tabs */}
+              <Tabs defaultValue="colors" className="w-full">
+                <TabsList className="grid w-full grid-cols-4">
+                  <TabsTrigger value="colors">
+                    <Palette className="w-4 h-4 mr-2" />
+                    Cores
+                  </TabsTrigger>
+                  <TabsTrigger value="eyes">
+                    <Eye className="w-4 h-4 mr-2" />
+                    Olhos
+                  </TabsTrigger>
+                  <TabsTrigger value="ears">
+                    <Ear className="w-4 h-4 mr-2" />
+                    Orelhas
+                  </TabsTrigger>
+                  <TabsTrigger value="traits">
+                    <TestTube className="w-4 h-4 mr-2" />
+                    Outras
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="colors" className="mt-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Possíveis Cores</CardTitle>
+                      <CardDescription>Baseado nos genótipos dos pais</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {results.genotypes.length > 0 ? (
+                        <div className="space-y-3">
+                          {results.genotypes.map((outcome, index) => (
+                            <div
+                              key={index}
+                              className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+                            >
+                              <div className="flex-1">
+                                <p className="font-medium">{outcome.phenotype}</p>
+                                <p className="text-sm text-muted-foreground">
+                                  Genótipo: {outcome.genotype}
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-2xl font-bold text-primary">
+                                  {outcome.probability}%
+                                </p>
+                                <div className="w-24 bg-background rounded-full h-2 mt-1">
+                                  <div
+                                    className="h-full bg-primary rounded-full transition-all"
+                                    style={{ width: `${outcome.probability}%` }}
+                                  />
+                                </div>
+                              </div>
                             </div>
-                          </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-center text-muted-foreground">
-                      Genótipos não informados para os pais selecionados
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
+                      ) : (
+                        <p className="text-center text-muted-foreground">
+                          Genótipos não informados para os pais selecionados
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                <TabsContent value="eyes" className="mt-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Possíveis Cores de Olhos</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {results.traitSummary?.eyes && (
+                        <div className="space-y-3">
+                          {results.traitSummary.eyes.map((outcome, index) => (
+                            <div
+                              key={index}
+                              className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
+                            >
+                              <p className="font-medium">{outcome.eyeColor}</p>
+                              <div className="text-right flex items-center gap-4">
+                                <p className="text-2xl font-bold text-primary">
+                                  {outcome.probability}%
+                                </p>
+                                <div className="w-24 bg-background rounded-full h-2">
+                                  <div
+                                    className="h-full bg-primary rounded-full"
+                                    style={{ width: `${outcome.probability}%` }}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                <TabsContent value="ears" className="mt-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Possíveis Tipos de Orelhas</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {results.traitSummary?.ears && (
+                        <div className="space-y-3">
+                          {results.traitSummary.ears.map((outcome, index) => (
+                            <div
+                              key={index}
+                              className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
+                            >
+                              <p className="font-medium">{outcome.earType}</p>
+                              <div className="text-right flex items-center gap-4">
+                                <p className="text-2xl font-bold text-primary">
+                                  {outcome.probability}%
+                                </p>
+                                <div className="w-24 bg-background rounded-full h-2">
+                                  <div
+                                    className="h-full bg-primary rounded-full"
+                                    style={{ width: `${outcome.probability}%` }}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                <TabsContent value="traits" className="mt-4">
+                  <div className="space-y-4">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Tipos de Pelagem</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        {results.traitSummary?.coatTypes && (
+                          <div className="space-y-3">
+                            {results.traitSummary.coatTypes.map((outcome, index) => (
+                              <div
+                                key={index}
+                                className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
+                              >
+                                <p className="font-medium">{outcome.coatType}</p>
+                                <div className="text-right flex items-center gap-4">
+                                  <p className="text-2xl font-bold text-primary">
+                                    {outcome.probability}%
+                                  </p>
+                                  <div className="w-24 bg-background rounded-full h-2">
+                                    <div
+                                      className="h-full bg-primary rounded-full"
+                                      style={{ width: `${outcome.probability}%` }}
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Marcações</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        {results.traitSummary?.markings && (
+                          <div className="space-y-3">
+                            {results.traitSummary.markings.map((outcome, index) => (
+                              <div
+                                key={index}
+                                className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
+                              >
+                                <p className="font-medium">{outcome.marking}</p>
+                                <div className="text-right flex items-center gap-4">
+                                  <p className="text-2xl font-bold text-primary">
+                                    {outcome.probability}%
+                                  </p>
+                                  <div className="w-24 bg-background rounded-full h-2">
+                                    <div
+                                      className="h-full bg-primary rounded-full"
+                                      style={{ width: `${outcome.probability}%` }}
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
+                </TabsContent>
+              </Tabs>
             </div>
           )}
         </div>

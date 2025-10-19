@@ -3,6 +3,7 @@ import { Rat } from "@/types/rat";
 import { RatCard } from "@/components/RatCard";
 import { AddRatDialog } from "@/components/AddRatDialog";
 import { RatDetailsDialog } from "@/components/RatDetailsDialog";
+import { EditRatDialog } from "@/components/EditRatDialog";
 import { BreedingSimulator } from "@/components/BreedingSimulator";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -11,6 +12,7 @@ import { Search, Filter } from "lucide-react";
 const Index = () => {
   const [rats, setRats] = useState<Rat[]>([]);
   const [selectedRat, setSelectedRat] = useState<Rat | null>(null);
+  const [editingRat, setEditingRat] = useState<Rat | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterSex, setFilterSex] = useState<string>("all");
   const [filterBreeding, setFilterBreeding] = useState<string>("all");
@@ -30,6 +32,10 @@ const Index = () => {
 
   const handleAddRat = (rat: Rat) => {
     setRats([...rats, rat]);
+  };
+
+  const handleUpdateRat = (updatedRat: Rat) => {
+    setRats(rats.map(r => r.id === updatedRat.id ? updatedRat : r));
   };
 
   const filteredRats = rats.filter((rat) => {
@@ -144,7 +150,23 @@ const Index = () => {
         rat={selectedRat}
         open={!!selectedRat}
         onOpenChange={(open) => !open && setSelectedRat(null)}
+        onEdit={(rat) => {
+          setEditingRat(rat);
+          setSelectedRat(null);
+        }}
+        allRats={rats}
       />
+
+      {/* Edit Rat Dialog */}
+      {editingRat && (
+        <EditRatDialog
+          rat={editingRat}
+          open={!!editingRat}
+          onOpenChange={(open) => !open && setEditingRat(null)}
+          onSave={handleUpdateRat}
+          allRats={rats}
+        />
+      )}
     </div>
   );
 };
