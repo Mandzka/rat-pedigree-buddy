@@ -70,10 +70,6 @@ export function RatDetailsDialog({ rat, open, onOpenChange }: RatDetailsDialogPr
                 <p className="font-medium">{rat.coatType}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Textura</p>
-                <p className="font-medium">{rat.coatTexture}</p>
-              </div>
-              <div>
                 <p className="text-sm text-muted-foreground">Cor</p>
                 <p className="font-medium">{rat.coatColor}</p>
               </div>
@@ -89,6 +85,12 @@ export function RatDetailsDialog({ rat, open, onOpenChange }: RatDetailsDialogPr
                 <p className="text-sm text-muted-foreground">Orelhas</p>
                 <p className="font-medium">{rat.earType}</p>
               </div>
+              {rat.specialMarks && (
+                <div className="col-span-2">
+                  <p className="text-sm text-muted-foreground">Marcas Especiais</p>
+                  <p className="font-medium">{rat.specialMarks}</p>
+                </div>
+              )}
             </div>
           </div>
 

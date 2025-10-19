@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
-import { Rat, CoatType, CoatTexture, Marking, EyeColor, EarType } from "@/types/rat";
+import { Rat, CoatType, Marking, EyeColor, EarType, RatStatus, RatDestination } from "@/types/rat";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { ratColorDatabase } from "@/data/ratColors";
@@ -22,18 +22,25 @@ export function AddRatDialog({ onAddRat, allRats }: AddRatDialogProps) {
   const [formData, setFormData] = useState({
     name: "",
     dateOfBirth: "",
-    sex: "Macho" as const,
+    dateOfDeath: "",
+    sex: "Macho" as "Macho" | "Fêmea",
     origin: "Nascido na Rattery" as const,
+    status: "Vivo" as RatStatus,
+    destination: "Reprodução" as RatDestination,
+    isBreeder: false,
     coatType: "Standard" as CoatType,
-    coatTexture: "Liso" as CoatTexture,
     coatColor: "",
     marking: "Self" as Marking,
     eyeColor: "Preto" as EyeColor,
     earType: "Standard" as EarType,
+    specialMarks: "",
     genotype: "",
+    carrierGenes: "",
+    geneticNotes: "",
     deformities: "",
     breedingApproved: false,
     inbreedingCoefficient: 0,
+    numberOfLitters: 0,
     temperamentNotes: "",
     sociability: 3,
     courage: 3,
@@ -41,6 +48,8 @@ export function AddRatDialog({ onAddRat, allRats }: AddRatDialogProps) {
     calmness: 3,
     dominance: 3,
     humanAttachment: 3,
+    notes: "",
+    registrationNumber: "",
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -55,18 +64,25 @@ export function AddRatDialog({ onAddRat, allRats }: AddRatDialogProps) {
       id: crypto.randomUUID(),
       name: formData.name,
       dateOfBirth: formData.dateOfBirth,
+      dateOfDeath: formData.dateOfDeath || undefined,
       sex: formData.sex,
       origin: formData.origin,
+      status: formData.status,
+      destination: formData.destination,
+      isBreeder: formData.isBreeder,
       coatType: formData.coatType,
-      coatTexture: formData.coatTexture,
       coatColor: formData.coatColor,
       marking: formData.marking,
       eyeColor: formData.eyeColor,
       earType: formData.earType,
+      specialMarks: formData.specialMarks || undefined,
       genotype: formData.genotype || undefined,
+      carrierGenes: formData.carrierGenes || undefined,
+      geneticNotes: formData.geneticNotes || undefined,
       deformities: formData.deformities || undefined,
       breedingApproved: formData.breedingApproved,
       inbreedingCoefficient: formData.inbreedingCoefficient,
+      numberOfLitters: formData.numberOfLitters,
       temperamentNotes: formData.temperamentNotes || undefined,
       temperamentScores: {
         sociability: formData.sociability,
@@ -76,6 +92,8 @@ export function AddRatDialog({ onAddRat, allRats }: AddRatDialogProps) {
         dominance: formData.dominance,
         humanAttachment: formData.humanAttachment,
       },
+      notes: formData.notes || undefined,
+      registrationNumber: formData.registrationNumber || undefined,
     };
 
     onAddRat(newRat);
@@ -86,18 +104,25 @@ export function AddRatDialog({ onAddRat, allRats }: AddRatDialogProps) {
     setFormData({
       name: "",
       dateOfBirth: "",
+      dateOfDeath: "",
       sex: "Macho",
       origin: "Nascido na Rattery",
+      status: "Vivo",
+      destination: "Reprodução",
+      isBreeder: false,
       coatType: "Standard",
-      coatTexture: "Liso",
       coatColor: "",
       marking: "Self",
       eyeColor: "Preto",
       earType: "Standard",
+      specialMarks: "",
       genotype: "",
+      carrierGenes: "",
+      geneticNotes: "",
       deformities: "",
       breedingApproved: false,
       inbreedingCoefficient: 0,
+      numberOfLitters: 0,
       temperamentNotes: "",
       sociability: 3,
       courage: 3,
@@ -105,6 +130,8 @@ export function AddRatDialog({ onAddRat, allRats }: AddRatDialogProps) {
       calmness: 3,
       dominance: 3,
       humanAttachment: 3,
+      notes: "",
+      registrationNumber: "",
     });
   };
 
@@ -167,6 +194,63 @@ export function AddRatDialog({ onAddRat, allRats }: AddRatDialogProps) {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="status">Status</Label>
+                <Select value={formData.status} onValueChange={(value: RatStatus) => setFormData({ ...formData, status: value })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Vivo">Vivo</SelectItem>
+                    <SelectItem value="Falecido">Falecido</SelectItem>
+                    <SelectItem value="Aposentado">Aposentado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="destination">Destino</Label>
+                <Select value={formData.destination} onValueChange={(value: RatDestination) => setFormData({ ...formData, destination: value })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Reprodução">Reprodução</SelectItem>
+                    <SelectItem value="Pet">Pet</SelectItem>
+                    <SelectItem value="Vendido">Vendido</SelectItem>
+                    <SelectItem value="Doado">Doado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {formData.status === "Falecido" && (
+                <div className="space-y-2">
+                  <Label htmlFor="dateOfDeath">Data de Falecimento</Label>
+                  <Input
+                    id="dateOfDeath"
+                    type="date"
+                    value={formData.dateOfDeath}
+                    onChange={(e) => setFormData({ ...formData, dateOfDeath: e.target.value })}
+                  />
+                </div>
+              )}
+              <div className="space-y-2">
+                <Label htmlFor="registrationNumber">Número de Registro</Label>
+                <Input
+                  id="registrationNumber"
+                  value={formData.registrationNumber}
+                  onChange={(e) => setFormData({ ...formData, registrationNumber: e.target.value })}
+                  placeholder="Auto-gerado se vazio"
+                />
+              </div>
+              <div className="col-span-2 flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                <Label htmlFor="isBreeder" className="cursor-pointer">
+                  Ativo para Reprodução
+                </Label>
+                <Switch
+                  id="isBreeder"
+                  checked={formData.isBreeder}
+                  onCheckedChange={(checked) => setFormData({ ...formData, isBreeder: checked })}
+                />
+              </div>
             </div>
           </div>
 
@@ -187,19 +271,20 @@ export function AddRatDialog({ onAddRat, allRats }: AddRatDialogProps) {
                     <SelectItem value="Hairless">Hairless</SelectItem>
                     <SelectItem value="Double Rex">Double Rex</SelectItem>
                     <SelectItem value="Satin">Satin</SelectItem>
+                    <SelectItem value="Harley">Harley</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="coatTexture">Textura</Label>
-                <Select value={formData.coatTexture} onValueChange={(value: CoatTexture) => setFormData({ ...formData, coatTexture: value })}>
+                <Label htmlFor="earType">Tipo de Orelha</Label>
+                <Select value={formData.earType} onValueChange={(value: EarType) => setFormData({ ...formData, earType: value })}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Liso">Liso</SelectItem>
-                    <SelectItem value="Ondulado">Ondulado</SelectItem>
-                    <SelectItem value="Cacheado">Cacheado</SelectItem>
+                    <SelectItem value="Standard">Standard</SelectItem>
+                    <SelectItem value="Dumbo">Dumbo</SelectItem>
+                    <SelectItem value="Top">Top</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -252,6 +337,10 @@ export function AddRatDialog({ onAddRat, allRats }: AddRatDialogProps) {
                     <SelectItem value="Variegated">Variegated</SelectItem>
                     <SelectItem value="Capped">Capped</SelectItem>
                     <SelectItem value="Bareback">Bareback</SelectItem>
+                    <SelectItem value="Essex">Essex</SelectItem>
+                    <SelectItem value="Masked">Masked</SelectItem>
+                    <SelectItem value="Dalmatian">Dalmatian</SelectItem>
+                    <SelectItem value="Roan">Roan</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -264,21 +353,9 @@ export function AddRatDialog({ onAddRat, allRats }: AddRatDialogProps) {
                   <SelectContent>
                     <SelectItem value="Preto">Preto</SelectItem>
                     <SelectItem value="Ruby">Ruby</SelectItem>
+                    <SelectItem value="Red">Red</SelectItem>
                     <SelectItem value="Odd-eyed">Odd-eyed</SelectItem>
-                    <SelectItem value="Vermelho">Vermelho</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="earType">Tipo de Orelha</Label>
-                <Select value={formData.earType} onValueChange={(value: EarType) => setFormData({ ...formData, earType: value })}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Standard">Standard</SelectItem>
-                    <SelectItem value="Dumbo">Dumbo</SelectItem>
-                    <SelectItem value="Top">Top</SelectItem>
+                    <SelectItem value="Pink">Pink</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -306,6 +383,15 @@ export function AddRatDialog({ onAddRat, allRats }: AddRatDialogProps) {
                 />
               </div>
               <div className="space-y-2">
+                <Label htmlFor="carrierGenes">Genes Portadores</Label>
+                <Input
+                  id="carrierGenes"
+                  value={formData.carrierGenes}
+                  onChange={(e) => setFormData({ ...formData, carrierGenes: e.target.value })}
+                  placeholder="Ex: cm (carrega marten), dd (carrega diluição)"
+                />
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="inbreedingCoefficient">Coef. Inbreeding (%)</Label>
                 <Input
                   id="inbreedingCoefficient"
@@ -314,6 +400,36 @@ export function AddRatDialog({ onAddRat, allRats }: AddRatDialogProps) {
                   max="100"
                   value={formData.inbreedingCoefficient}
                   onChange={(e) => setFormData({ ...formData, inbreedingCoefficient: parseFloat(e.target.value) })}
+                />
+              </div>
+              {formData.sex === "Fêmea" && (
+                <div className="space-y-2">
+                  <Label htmlFor="numberOfLitters">Número de Ninhadas</Label>
+                  <Input
+                    id="numberOfLitters"
+                    type="number"
+                    min="0"
+                    value={formData.numberOfLitters}
+                    onChange={(e) => setFormData({ ...formData, numberOfLitters: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+              )}
+              <div className="col-span-2 space-y-2">
+                <Label htmlFor="specialMarks">Marcas Especiais</Label>
+                <Input
+                  id="specialMarks"
+                  value={formData.specialMarks}
+                  onChange={(e) => setFormData({ ...formData, specialMarks: e.target.value })}
+                  placeholder="Ex: blazed assimétrico, odd-eye específico"
+                />
+              </div>
+              <div className="col-span-2 space-y-2">
+                <Label htmlFor="geneticNotes">Anotações Genéticas</Label>
+                <Textarea
+                  id="geneticNotes"
+                  value={formData.geneticNotes}
+                  onChange={(e) => setFormData({ ...formData, geneticNotes: e.target.value })}
+                  placeholder="Ex: suspeita de heterozigose cm/Ch, possível portador de rr"
                 />
               </div>
               <div className="col-span-2 space-y-2">
@@ -431,6 +547,21 @@ export function AddRatDialog({ onAddRat, allRats }: AddRatDialogProps) {
                   />
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Observações Gerais */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-lg border-b pb-2">Observações Gerais</h3>
+            <div className="space-y-2">
+              <Label htmlFor="notes">Notas Adicionais</Label>
+              <Textarea
+                id="notes"
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                placeholder="Qualquer informação adicional sobre o rato..."
+                rows={4}
+              />
             </div>
           </div>
 

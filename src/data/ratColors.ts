@@ -129,6 +129,41 @@ export const ratColorDatabase: ColorGroup[] = [
         description: "Dourado escuro"
       }
     ]
+  },
+  {
+    group: "Variedades Especiais (Marten e Silvermane)",
+    colors: [
+      {
+        name: "Black Marten",
+        genotype: "aa B- D- cm",
+        description: "Preto com barriga e patas prateadas (locus C marten)"
+      },
+      {
+        name: "Blue Marten",
+        genotype: "aa B- dd cm",
+        description: "Azul com barriga prateada"
+      },
+      {
+        name: "Agouti Marten",
+        genotype: "A- B- D- cm",
+        description: "Agouti com barriga clara tipo marten"
+      },
+      {
+        name: "Cinnamon Marten",
+        genotype: "A- bb D- cm",
+        description: "Canela com barriga prateada"
+      },
+      {
+        name: "Silvermane",
+        genotype: "-- Sm",
+        description: "Pelagem com pelos brancos intercalados (gene dominante Silvermane)"
+      },
+      {
+        name: "Pearl",
+        genotype: "aa B- D- pb",
+        description: "Cinza perolado claro"
+      }
+    ]
   }
 ];
 
