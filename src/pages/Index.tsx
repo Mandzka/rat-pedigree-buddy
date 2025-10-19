@@ -7,7 +7,6 @@ import { BreedingSimulator } from "@/components/BreedingSimulator";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, Filter } from "lucide-react";
-import heroImage from "@/assets/hero-rats.jpg";
 
 const Index = () => {
   const [rats, setRats] = useState<Rat[]>([]);
@@ -47,17 +46,11 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30">
       {/* Hero Section */}
-      <div className="relative overflow-hidden">
-        <div 
-          className="h-64 bg-cover bg-center relative"
-          style={{
-            backgroundImage: `linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url(${heroImage})`
-          }}
-        >
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
-            <h1 className="text-5xl font-bold mb-2 drop-shadow-lg">Rattery Pedigree</h1>
-            <p className="text-xl drop-shadow-md">Gestão Profissional de Criação</p>
-          </div>
+      <div className="relative overflow-hidden bg-gradient-to-r from-primary via-primary-glow to-primary">
+        <div className="h-64 relative flex items-center justify-center">
+          <h1 className="text-7xl md:text-8xl font-bold text-white drop-shadow-2xl tracking-tight font-serif">
+            Pokeratos Rattery
+          </h1>
         </div>
       </div>
 
