@@ -53,6 +53,7 @@ export interface Rat {
   // Pedigree
   motherId?: string;
   fatherId?: string;
+  litterId?: string; // ID da ninhada a que este rato pertence
   litterIds?: string[]; // IDs das ninhadas que este rato gerou (como pai/mãe)
   offspringIds?: string[]; // IDs dos filhotes diretos
   

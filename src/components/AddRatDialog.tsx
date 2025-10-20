@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
-import { Rat, CoatType, Marking, EyeColor, EarType, RatStatus, RatDestination } from "@/types/rat";
+import { Rat, CoatType, Marking, EyeColor, EarType, RatStatus, RatDestination, Litter } from "@/types/rat";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { ratColorDatabase } from "@/data/ratColors";
@@ -15,9 +15,10 @@ import { ratColorDatabase } from "@/data/ratColors";
 interface AddRatDialogProps {
   onAddRat: (rat: Rat) => void;
   allRats: Rat[];
+  allLitters: Litter[];
 }
 
-export function AddRatDialog({ onAddRat, allRats }: AddRatDialogProps) {
+export function AddRatDialog({ onAddRat, allRats, allLitters }: AddRatDialogProps) {
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -30,6 +31,7 @@ export function AddRatDialog({ onAddRat, allRats }: AddRatDialogProps) {
     isBreeder: false,
     motherId: "",
     fatherId: "",
+    litterId: "",
     coatType: "Standard" as CoatType,
     coatColor: "",
     marking: "Self" as Marking,
@@ -74,6 +76,7 @@ export function AddRatDialog({ onAddRat, allRats }: AddRatDialogProps) {
       isBreeder: formData.isBreeder,
       motherId: formData.motherId || undefined,
       fatherId: formData.fatherId || undefined,
+      litterId: formData.litterId || undefined,
       coatType: formData.coatType,
       coatColor: formData.coatColor,
       marking: formData.marking,
@@ -116,6 +119,7 @@ export function AddRatDialog({ onAddRat, allRats }: AddRatDialogProps) {
       isBreeder: false,
       motherId: "",
       fatherId: "",
+      litterId: "",
       coatType: "Standard",
       coatColor: "",
       marking: "Self",
@@ -265,6 +269,22 @@ export function AddRatDialog({ onAddRat, allRats }: AddRatDialogProps) {
             <h3 className="font-semibold text-lg border-b pb-2">Pedigree</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
+                <Label htmlFor="litter">Ninhada</Label>
+                <Select value={formData.litterId || "unknown"} onValueChange={(value) => setFormData({ ...formData, litterId: value === "unknown" ? "" : value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Desconhecido" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unknown">Desconhecido</SelectItem>
+                    {allLitters.map(l => (
+                      <SelectItem key={l.id} value={l.id}>
+                        {l.litterCode} - {allRats.find(r => r.id === l.motherId)?.name} x {allRats.find(r => r.id === l.fatherId)?.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="mother">Mãe</Label>
                 <Select value={formData.motherId || "unknown"} onValueChange={(value) => setFormData({ ...formData, motherId: value === "unknown" ? "" : value })}>
                   <SelectTrigger>
@@ -340,7 +360,7 @@ export function AddRatDialog({ onAddRat, allRats }: AddRatDialogProps) {
                     setFormData({ 
                       ...formData, 
                       coatColor: value,
-                      genotype: selectedColor?.genotype || formData.genotype
+                      genotype: selectedColor?.genotype || ""
                     });
                   }}
                 >
@@ -411,8 +431,8 @@ export function AddRatDialog({ onAddRat, allRats }: AddRatDialogProps) {
                 <Label htmlFor="genotype">
                   Genótipo
                   {formData.coatColor && (
-                    <span className="text-xs text-muted-foreground ml-2">
-                      (Auto-preenchido)
+                    <span className="text-xs text-success ml-2">
+                      ✓ Auto-preenchido pela cor
                     </span>
                   )}
                 </Label>
@@ -421,6 +441,7 @@ export function AddRatDialog({ onAddRat, allRats }: AddRatDialogProps) {
                   value={formData.genotype}
                   onChange={(e) => setFormData({ ...formData, genotype: e.target.value })}
                   placeholder="Ex: Aa Bb Dd"
+                  className={formData.genotype ? "border-success/50" : ""}
                 />
               </div>
               <div className="space-y-2">

@@ -1,21 +1,25 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Rat } from "@/types/rat";
+import { Rat, Litter } from "@/types/rat";
 import { formatAge } from "@/utils/ageCalculator";
-import { Calendar, Heart, Star, Dna, Activity, Edit } from "lucide-react";
+import { Calendar, Heart, Star, Dna, Activity, Edit, Trash2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { PedigreeTree } from "./PedigreeTree";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 
 interface RatDetailsDialogProps {
   rat: Rat | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onEdit: (rat: Rat) => void;
+  onDelete: (ratId: string) => void;
   allRats: Rat[];
+  allLitters: Litter[];
 }
 
-export function RatDetailsDialog({ rat, open, onOpenChange, onEdit, allRats }: RatDetailsDialogProps) {
+export function RatDetailsDialog({ rat, open, onOpenChange, onEdit, onDelete, allRats, allLitters }: RatDetailsDialogProps) {
   if (!rat) return null;
 
   const temperamentScores = rat.temperamentScores;
@@ -40,6 +44,35 @@ export function RatDetailsDialog({ rat, open, onOpenChange, onEdit, allRats }: R
                 <Edit className="w-4 h-4 mr-2" />
                 Editar
               </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" size="sm">
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Excluir
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Tem certeza que deseja excluir {rat.name}? Esta ação não pode ser desfeita.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction 
+                      onClick={() => {
+                        onDelete(rat.id);
+                        onOpenChange(false);
+                        toast.success(`${rat.name} foi removido com sucesso`);
+                      }}
+                      className="bg-destructive hover:bg-destructive/90"
+                    >
+                      Excluir
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           </div>
         </DialogHeader>
@@ -68,6 +101,14 @@ export function RatDetailsDialog({ rat, open, onOpenChange, onEdit, allRats }: R
                 <p className="text-sm text-muted-foreground">Origem</p>
                 <p className="font-medium">{rat.origin}</p>
               </div>
+              {rat.litterId && (
+                <div className="col-span-2">
+                  <p className="text-sm text-muted-foreground">Ninhada</p>
+                  <p className="font-medium">
+                    {allLitters.find(l => l.id === rat.litterId)?.litterCode || "Desconhecida"}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 

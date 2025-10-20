@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { Rat } from "@/types/rat";
+import { Rat, Litter } from "@/types/rat";
 import { RatCard } from "@/components/RatCard";
 import { AddRatDialog } from "@/components/AddRatDialog";
+import { AddLitterDialog } from "@/components/AddLitterDialog";
 import { RatDetailsDialog } from "@/components/RatDetailsDialog";
 import { EditRatDialog } from "@/components/EditRatDialog";
 import { BreedingSimulator } from "@/components/BreedingSimulator";
@@ -11,24 +12,29 @@ import { Search, Filter } from "lucide-react";
 
 const Index = () => {
   const [rats, setRats] = useState<Rat[]>([]);
+  const [litters, setLitters] = useState<Litter[]>([]);
   const [selectedRat, setSelectedRat] = useState<Rat | null>(null);
   const [editingRat, setEditingRat] = useState<Rat | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterSex, setFilterSex] = useState<string>("all");
   const [filterBreeding, setFilterBreeding] = useState<string>("all");
 
-  // Load rats from localStorage on mount
+  // Load data from localStorage on mount
   useEffect(() => {
-    const stored = localStorage.getItem("rats");
-    if (stored) {
-      setRats(JSON.parse(stored));
-    }
+    const storedRats = localStorage.getItem("rats");
+    const storedLitters = localStorage.getItem("litters");
+    if (storedRats) setRats(JSON.parse(storedRats));
+    if (storedLitters) setLitters(JSON.parse(storedLitters));
   }, []);
 
-  // Save rats to localStorage whenever they change
+  // Save data to localStorage whenever they change
   useEffect(() => {
     localStorage.setItem("rats", JSON.stringify(rats));
   }, [rats]);
+
+  useEffect(() => {
+    localStorage.setItem("litters", JSON.stringify(litters));
+  }, [litters]);
 
   const handleAddRat = (rat: Rat) => {
     setRats([...rats, rat]);
@@ -38,9 +44,21 @@ const Index = () => {
     setRats(rats.map(r => r.id === updatedRat.id ? updatedRat : r));
   };
 
+  const handleDeleteRat = (ratId: string) => {
+    setRats(rats.filter(r => r.id !== ratId));
+  };
+
+  const handleAddLitter = (litter: Litter) => {
+    setLitters([...litters, litter]);
+  };
+
   const filteredRats = rats.filter((rat) => {
+    const ratLitter = rat.litterId ? litters.find(l => l.id === rat.litterId) : null;
+    const litterName = ratLitter?.litterCode?.toLowerCase() || "";
+    
     const matchesSearch = rat.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         rat.coatColor.toLowerCase().includes(searchTerm.toLowerCase());
+                         rat.coatColor.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         litterName.includes(searchTerm.toLowerCase());
     const matchesSex = filterSex === "all" || rat.sex === filterSex;
     const matchesBreeding = filterBreeding === "all" || 
                            (filterBreeding === "approved" && rat.breedingApproved) ||
@@ -87,7 +105,7 @@ const Index = () => {
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
             <Input
-              placeholder="Buscar por nome ou cor..."
+              placeholder="Buscar por nome, cor ou ninhada..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -116,7 +134,8 @@ const Index = () => {
               </SelectContent>
             </Select>
             <BreedingSimulator rats={rats} />
-            <AddRatDialog onAddRat={handleAddRat} allRats={rats} />
+            <AddLitterDialog onAddLitter={handleAddLitter} allRats={rats} />
+            <AddRatDialog onAddRat={handleAddRat} allRats={rats} allLitters={litters} />
           </div>
         </div>
 
@@ -139,7 +158,7 @@ const Index = () => {
                 : "Nenhum rato cadastrado ainda"}
             </p>
             {!searchTerm && filterSex === "all" && filterBreeding === "all" && (
-              <AddRatDialog onAddRat={handleAddRat} allRats={rats} />
+              <AddRatDialog onAddRat={handleAddRat} allRats={rats} allLitters={litters} />
             )}
           </div>
         )}
@@ -154,7 +173,9 @@ const Index = () => {
           setEditingRat(rat);
           setSelectedRat(null);
         }}
+        onDelete={handleDeleteRat}
         allRats={rats}
+        allLitters={litters}
       />
 
       {/* Edit Rat Dialog */}
