@@ -266,12 +266,12 @@ export function AddRatDialog({ onAddRat, allRats }: AddRatDialogProps) {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="mother">Mãe</Label>
-                <Select value={formData.motherId} onValueChange={(value) => setFormData({ ...formData, motherId: value })}>
+                <Select value={formData.motherId || "unknown"} onValueChange={(value) => setFormData({ ...formData, motherId: value === "unknown" ? "" : value })}>
                   <SelectTrigger>
                     <SelectValue placeholder="Desconhecido" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Desconhecido</SelectItem>
+                    <SelectItem value="unknown">Desconhecido</SelectItem>
                     {allRats.filter(r => r.sex === "Fêmea").map(r => (
                       <SelectItem key={r.id} value={r.id}>{r.name} - {r.coatColor}</SelectItem>
                     ))}
@@ -280,12 +280,12 @@ export function AddRatDialog({ onAddRat, allRats }: AddRatDialogProps) {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="father">Pai</Label>
-                <Select value={formData.fatherId} onValueChange={(value) => setFormData({ ...formData, fatherId: value })}>
+                <Select value={formData.fatherId || "unknown"} onValueChange={(value) => setFormData({ ...formData, fatherId: value === "unknown" ? "" : value })}>
                   <SelectTrigger>
                     <SelectValue placeholder="Desconhecido" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Desconhecido</SelectItem>
+                    <SelectItem value="unknown">Desconhecido</SelectItem>
                     {allRats.filter(r => r.sex === "Macho").map(r => (
                       <SelectItem key={r.id} value={r.id}>{r.name} - {r.coatColor}</SelectItem>
                     ))}
