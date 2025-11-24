@@ -10,13 +10,10 @@ interface RatCardProps {
 }
 
 export function RatCard({ rat, onClick }: RatCardProps) {
-  const averageTemperament = rat.temperamentScores
-    ? Object.values(rat.temperamentScores).reduce((a, b) => a + b, 0) / 6
-    : 0;
 
   return (
     <Card
-      className="cursor-pointer transition-all duration-300 hover:shadow-[var(--shadow-hover)] hover:-translate-y-1"
+      className="cursor-pointer transition-all duration-300 hover:shadow-[var(--shadow-hover)] hover:-translate-y-1 relative z-10"
       style={{ boxShadow: "var(--shadow-card)" }}
       onClick={onClick}
     >
@@ -30,7 +27,7 @@ export function RatCard({ rat, onClick }: RatCardProps) {
             </p>
           </div>
           {rat.breedingApproved && (
-            <Badge className="bg-gradient-to-r from-primary to-accent border-0">
+            <Badge className="text-white border-0" style={{ backgroundColor: '#ff9a9e' }}>
               <Heart className="w-3 h-3 mr-1" />
               Reprodutor
             </Badge>
@@ -54,12 +51,52 @@ export function RatCard({ rat, onClick }: RatCardProps) {
             <span className="text-muted-foreground">Marcação:</span>
             <span className="ml-1 font-medium">{rat.marking}</span>
           </div>
+          {rat.tutorName && (
+            <div className="text-sm col-span-2">
+              <span className="text-muted-foreground">Nome do Tutor:</span>
+              <span className="ml-1 font-medium text-primary">{rat.tutorName}</span>
+            </div>
+          )}
+          {rat.litterName && (
+            <div className="text-sm col-span-2">
+              <span className="text-muted-foreground">Ninhada:</span>
+              <span className="ml-1 font-medium text-secondary-foreground">{rat.litterName}</span>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center justify-between pt-4 border-t border-border">
-          <Badge variant="outline" className="text-xs">
-            {rat.origin}
-          </Badge>
+          <div className="flex gap-2">
+            <Badge 
+              variant="outline" 
+              className="text-xs text-white"
+              style={
+                rat.origin === 'Comprado' ? { backgroundColor: '#a6b49c', borderColor: '#a6b49c' } :
+                rat.origin === 'Nascido na Rattery' ? { backgroundColor: '#d3a17c', borderColor: '#d3a17c' } :
+                {}
+              }
+            >
+              {rat.origin}
+            </Badge>
+            <Badge 
+              className="text-xs text-white"
+              style={
+                rat.destination === 'Reprodução' ? { backgroundColor: '#c4a3ff' } :
+                rat.destination === 'Matriz' ? { backgroundColor: '#ffb3d1' } :
+                rat.destination === 'Padreador' ? { backgroundColor: '#a3d5ff' } :
+                rat.destination === 'Comprado' ? { backgroundColor: '#a6b49c' } :
+                rat.destination === 'Nascido na Rattery' ? { backgroundColor: '#d3a17c' } :
+                rat.destination === 'Pet' ? { backgroundColor: '#a8e6cf' } :
+                rat.destination === 'À venda' ? { backgroundColor: '#ffd3a5' } :
+                rat.destination === 'Para adoção' ? { backgroundColor: '#a8d8ea' } :
+                rat.destination === 'Vendido' ? { backgroundColor: '#c7ceea' } :
+                rat.destination === 'Doado' ? { backgroundColor: '#f0a3ff' } :
+                { backgroundColor: '#6b7280' }
+              }
+            >
+              {rat.destination}
+            </Badge>
+          </div>
           {averageTemperament > 0 && (
             <div className="flex items-center gap-1 text-sm text-muted-foreground">
               <Star className="w-4 h-4 fill-accent text-accent" />

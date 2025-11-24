@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,10 +13,14 @@ import { AlertTriangle, Heart, Sparkles, Eye, Ear, Palette, TestTube } from "luc
 
 interface BreedingSimulatorProps {
   rats: Rat[];
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function BreedingSimulator({ rats }: BreedingSimulatorProps) {
-  const [open, setOpen] = useState(false);
+export function BreedingSimulator({ rats, open: externalOpen, onOpenChange }: BreedingSimulatorProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = externalOpen !== undefined ? externalOpen : internalOpen;
+  const setOpen = onOpenChange || setInternalOpen;
   const [motherId, setMotherId] = useState<string>("");
   const [fatherId, setFatherId] = useState<string>("");
   const [results, setResults] = useState<{
@@ -42,7 +46,9 @@ export function BreedingSimulator({ rats }: BreedingSimulatorProps) {
     
     const genotypeResults = simulateGenotypes(
       mother.genotype || "",
-      father.genotype || ""
+      father.genotype || "",
+      mother,
+      father
     );
 
     const traitSummary = getTraitSummary(mother, father);
@@ -64,12 +70,6 @@ export function BreedingSimulator({ rats }: BreedingSimulatorProps) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="lg" className="shadow-lg">
-          <Sparkles className="w-5 h-5 mr-2" />
-          Simular Cruzamento
-        </Button>
-      </DialogTrigger>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl flex items-center gap-2">
@@ -121,7 +121,18 @@ export function BreedingSimulator({ rats }: BreedingSimulatorProps) {
             <Button 
               onClick={handleSimulate} 
               disabled={!motherId || !fatherId}
-              className="flex-1"
+              className="flex-1 text-white"
+              style={{ backgroundColor: '#a6b49c' }}
+              onMouseEnter={(e) => {
+                if (!e.target.disabled) {
+                  e.target.style.backgroundColor = '#95a394';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!e.target.disabled) {
+                  e.target.style.backgroundColor = '#a6b49c';
+                }
+              }}
             >
               Calcular Resultados
             </Button>
@@ -211,30 +222,53 @@ export function BreedingSimulator({ rats }: BreedingSimulatorProps) {
                     <CardContent>
                       {results.genotypes.length > 0 ? (
                         <div className="space-y-3">
-                          {results.genotypes.map((outcome, index) => (
-                            <div
-                              key={index}
-                              className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
-                            >
-                              <div className="flex-1">
-                                <p className="font-medium">{outcome.phenotype}</p>
-                                <p className="text-sm text-muted-foreground">
-                                  Genótipo: {outcome.genotype}
-                                </p>
-                              </div>
-                              <div className="text-right">
-                                <p className="text-2xl font-bold text-primary">
-                                  {outcome.probability}%
-                                </p>
-                                <div className="w-24 bg-background rounded-full h-2 mt-1">
-                                  <div
-                                    className="h-full bg-primary rounded-full transition-all"
-                                    style={{ width: `${outcome.probability}%` }}
-                                  />
+                          {(() => {
+                            // Agrupar por fenótipo (cor) e somar as probabilidades
+                            const groupedByPhenotype = results.genotypes.reduce((acc, outcome) => {
+                              if (!acc[outcome.phenotype]) {
+                                acc[outcome.phenotype] = {
+                                  phenotype: outcome.phenotype,
+                                  totalProbability: 0,
+                                  genotypes: []
+                                };
+                              }
+                              acc[outcome.phenotype].totalProbability += outcome.probability;
+                              acc[outcome.phenotype].genotypes.push(outcome.genotype);
+                              return acc;
+                            }, {} as Record<string, { phenotype: string; totalProbability: number; genotypes: string[] }>);
+
+                            // Converter para array e ordenar por probabilidade
+                            return Object.values(groupedByPhenotype)
+                              .sort((a, b) => b.totalProbability - a.totalProbability)
+                              .map((group, index) => (
+                                <div
+                                  key={index}
+                                  className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+                                >
+                                  <div className="flex-1">
+                                    <p className="font-medium">{group.phenotype}</p>
+                                    <p className="text-sm text-muted-foreground">
+                                      Genótipos possíveis: {group.genotypes.length}
+                                    </p>
+                                    <div className="text-xs text-muted-foreground mt-1">
+                                      {group.genotypes.slice(0, 3).join(", ")}
+                                      {group.genotypes.length > 3 && ` +${group.genotypes.length - 3} mais`}
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="text-2xl font-bold text-primary">
+                                      {Math.round(group.totalProbability * 10) / 10}%
+                                    </p>
+                                    <div className="w-24 bg-background rounded-full h-2 mt-1">
+                                      <div
+                                        className="h-full bg-primary rounded-full transition-all"
+                                        style={{ width: `${group.totalProbability}%` }}
+                                      />
+                                    </div>
+                                  </div>
                                 </div>
-                              </div>
-                            </div>
-                          ))}
+                              ));
+                          })()}
                         </div>
                       ) : (
                         <p className="text-center text-muted-foreground">
@@ -249,30 +283,59 @@ export function BreedingSimulator({ rats }: BreedingSimulatorProps) {
                   <Card>
                     <CardHeader>
                       <CardTitle>Possíveis Cores de Olhos</CardTitle>
+                      <CardDescription>Baseado nos genótipos dos pais</CardDescription>
                     </CardHeader>
                     <CardContent>
-                      {results.traitSummary?.eyes && (
+                      {results.genotypes.length > 0 ? (
                         <div className="space-y-3">
-                          {results.traitSummary.eyes.map((outcome, index) => (
-                            <div
-                              key={index}
-                              className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
-                            >
-                              <p className="font-medium">{outcome.eyeColor}</p>
-                              <div className="text-right flex items-center gap-4">
-                                <p className="text-2xl font-bold text-primary">
-                                  {outcome.probability}%
-                                </p>
-                                <div className="w-24 bg-background rounded-full h-2">
-                                  <div
-                                    className="h-full bg-primary rounded-full"
-                                    style={{ width: `${outcome.probability}%` }}
-                                  />
+                          {(() => {
+                            // Agrupar por cor dos olhos e somar as probabilidades
+                            const groupedByEyeColor = results.genotypes.reduce((acc, outcome) => {
+                              const eyeColor = outcome.eyeGenotype === "cc" ? "Pink" : "Preto";
+                              if (!acc[eyeColor]) {
+                                acc[eyeColor] = {
+                                  eyeColor,
+                                  totalProbability: 0,
+                                  genotypes: []
+                                };
+                              }
+                              acc[eyeColor].totalProbability += outcome.probability;
+                              acc[eyeColor].genotypes.push(outcome.eyeGenotype);
+                              return acc;
+                            }, {} as Record<string, { eyeColor: string; totalProbability: number; genotypes: string[] }>);
+
+                            return Object.values(groupedByEyeColor)
+                              .sort((a, b) => b.totalProbability - a.totalProbability)
+                              .map((group, index) => (
+                                <div
+                                  key={index}
+                                  className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+                                >
+                                  <div className="flex-1">
+                                    <p className="font-medium">{group.eyeColor}</p>
+                                    <p className="text-sm text-muted-foreground">
+                                      Genótipo: {group.genotypes[0]}
+                                    </p>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="text-2xl font-bold text-primary">
+                                      {Math.round(group.totalProbability * 10) / 10}%
+                                    </p>
+                                    <div className="w-24 bg-background rounded-full h-2 mt-1">
+                                      <div
+                                        className="h-full bg-primary rounded-full transition-all"
+                                        style={{ width: `${group.totalProbability}%` }}
+                                      />
+                                    </div>
+                                  </div>
                                 </div>
-                              </div>
-                            </div>
-                          ))}
+                              ));
+                          })()}
                         </div>
+                      ) : (
+                        <p className="text-center text-muted-foreground">
+                          Genótipos não informados para os pais selecionados
+                        </p>
                       )}
                     </CardContent>
                   </Card>
@@ -282,30 +345,75 @@ export function BreedingSimulator({ rats }: BreedingSimulatorProps) {
                   <Card>
                     <CardHeader>
                       <CardTitle>Possíveis Tipos de Orelhas</CardTitle>
+                      <CardDescription>Baseado nos genótipos dos pais</CardDescription>
                     </CardHeader>
                     <CardContent>
-                      {results.traitSummary?.ears && (
+                      {results.genotypes.length > 0 ? (
                         <div className="space-y-3">
-                          {results.traitSummary.ears.map((outcome, index) => (
-                            <div
-                              key={index}
-                              className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
-                            >
-                              <p className="font-medium">{outcome.earType}</p>
-                              <div className="text-right flex items-center gap-4">
-                                <p className="text-2xl font-bold text-primary">
-                                  {outcome.probability}%
-                                </p>
-                                <div className="w-24 bg-background rounded-full h-2">
+                          {(() => {
+                            console.log('=== DEBUG EAR TYPE GROUPING ===');
+                            console.log('Results genotypes:', results.genotypes);
+                            
+                            // Agrupar por tipo de orelha e somar as probabilidades
+                            const groupedByEarType = results.genotypes.reduce((acc, outcome) => {
+                              console.log('Processing outcome:', outcome);
+                              console.log('Ear genotype:', outcome.earGenotype);
+                              
+                              const earType = outcome.earGenotype === "du/du" ? "Dumbo" : "Top";
+                              console.log('Ear type determined:', earType);
+                              
+                              if (!acc[earType]) {
+                                acc[earType] = {
+                                  earType,
+                                  totalProbability: 0,
+                                  genotypes: []
+                                };
+                              }
+                              acc[earType].totalProbability += outcome.probability;
+                              acc[earType].genotypes.push(outcome.earGenotype);
+                              return acc;
+                            }, {} as Record<string, { earType: string; totalProbability: number; genotypes: string[] }>);
+                            
+                            console.log('Grouped by ear type:', groupedByEarType);
+                            console.log('===============================================');
+
+                            return Object.values(groupedByEarType)
+                              .sort((a, b) => b.totalProbability - a.totalProbability)
+                              .map((group, index) => {
+                                // Normalizar a probabilidade para garantir que não exceda 100%
+                                const normalizedProbability = Math.min(group.totalProbability, 100);
+                                
+                                return (
                                   <div
-                                    className="h-full bg-primary rounded-full"
-                                    style={{ width: `${outcome.probability}%` }}
-                                  />
-                                </div>
-                              </div>
-                            </div>
-                          ))}
+                                    key={index}
+                                    className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+                                  >
+                                    <div className="flex-1">
+                                      <p className="font-medium">{group.earType}</p>
+                                      <p className="text-sm text-muted-foreground">
+                                        Genótipo: {group.genotypes[0]}
+                                      </p>
+                                    </div>
+                                    <div className="text-right">
+                                      <p className="text-2xl font-bold text-primary">
+                                        {Math.round(normalizedProbability * 10) / 10}%
+                                      </p>
+                                      <div className="w-24 bg-background rounded-full h-2 mt-1">
+                                        <div
+                                          className="h-full bg-primary rounded-full transition-all"
+                                          style={{ width: `${normalizedProbability}%` }}
+                                        />
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              });
+                          })()}
                         </div>
+                      ) : (
+                        <p className="text-center text-muted-foreground">
+                          Genótipos não informados para os pais selecionados
+                        </p>
                       )}
                     </CardContent>
                   </Card>
@@ -316,30 +424,86 @@ export function BreedingSimulator({ rats }: BreedingSimulatorProps) {
                     <Card>
                       <CardHeader>
                         <CardTitle>Tipos de Pelagem</CardTitle>
+                        <CardDescription>Baseado nos genótipos dos pais</CardDescription>
                       </CardHeader>
                       <CardContent>
-                        {results.traitSummary?.coatTypes && (
+                        {results.genotypes.length > 0 ? (
                           <div className="space-y-3">
-                            {results.traitSummary.coatTypes.map((outcome, index) => (
-                              <div
-                                key={index}
-                                className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
-                              >
-                                <p className="font-medium">{outcome.coatType}</p>
-                                <div className="text-right flex items-center gap-4">
-                                  <p className="text-2xl font-bold text-primary">
-                                    {outcome.probability}%
-                                  </p>
-                                  <div className="w-24 bg-background rounded-full h-2">
+                            {(() => {
+                              console.log('=== DEBUG COAT TYPE GROUPING ===');
+                              console.log('Results genotypes:', results.genotypes);
+                              
+                              // Agrupar por tipo de pelagem e somar as probabilidades
+                              const groupedByCoatType = results.genotypes.reduce((acc, outcome) => {
+                                console.log('Processing outcome:', outcome);
+                                console.log('Coat genotype:', outcome.coatGenotype);
+                                
+                                // Determinar o tipo de pelagem baseado no genótipo
+                                let coatType = "Standard"; // Default
+                                if (outcome.coatGenotype === "Re/Re") {
+                                  coatType = "Double Rex";
+                                } else if (outcome.coatGenotype === "Re/re") {
+                                  coatType = "Rex";
+                                } else if (outcome.coatGenotype === "re/re") {
+                                  coatType = "Standard";
+                                } else if (outcome.coatGenotype) {
+                                  coatType = outcome.coatGenotype; // Use the genotype as fallback
+                                }
+                                
+                                console.log('Coat type determined:', coatType);
+                                
+                                if (!acc[coatType]) {
+                                  acc[coatType] = {
+                                    coatType,
+                                    totalProbability: 0,
+                                    genotypes: []
+                                  };
+                                }
+                                acc[coatType].totalProbability += outcome.probability;
+                                acc[coatType].genotypes.push(outcome.coatGenotype);
+                                return acc;
+                              }, {} as Record<string, { coatType: string; totalProbability: number; genotypes: string[] }>);
+                              
+                              console.log('Grouped by coat type:', groupedByCoatType);
+                              console.log('===============================================');
+
+                              return Object.values(groupedByCoatType)
+                                .sort((a, b) => b.totalProbability - a.totalProbability)
+                                .map((group, index) => {
+                                  // Normalizar a probabilidade para garantir que não exceda 100%
+                                  const normalizedProbability = Math.min(group.totalProbability, 100);
+                                  
+                                  return (
                                     <div
-                                      className="h-full bg-primary rounded-full"
-                                      style={{ width: `${outcome.probability}%` }}
-                                    />
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
+                                      key={index}
+                                      className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+                                    >
+                                      <div className="flex-1">
+                                        <p className="font-medium">{group.coatType}</p>
+                                        <p className="text-sm text-muted-foreground">
+                                          Genótipo: {group.genotypes[0]}
+                                        </p>
+                                      </div>
+                                      <div className="text-right">
+                                        <p className="text-2xl font-bold text-primary">
+                                          {Math.round(normalizedProbability * 10) / 10}%
+                                        </p>
+                                        <div className="w-24 bg-background rounded-full h-2 mt-1">
+                                          <div
+                                            className="h-full bg-primary rounded-full transition-all"
+                                            style={{ width: `${normalizedProbability}%` }}
+                                          />
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                });
+                            })()}
                           </div>
+                        ) : (
+                          <p className="text-center text-muted-foreground">
+                            Genótipos não informados para os pais selecionados
+                          </p>
                         )}
                       </CardContent>
                     </Card>
@@ -347,30 +511,92 @@ export function BreedingSimulator({ rats }: BreedingSimulatorProps) {
                     <Card>
                       <CardHeader>
                         <CardTitle>Marcações</CardTitle>
+                        <CardDescription>Baseado nos genótipos dos pais</CardDescription>
                       </CardHeader>
                       <CardContent>
-                        {results.traitSummary?.markings && (
+                        {results.genotypes.length > 0 ? (
                           <div className="space-y-3">
-                            {results.traitSummary.markings.map((outcome, index) => (
-                              <div
-                                key={index}
-                                className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
-                              >
-                                <p className="font-medium">{outcome.marking}</p>
-                                <div className="text-right flex items-center gap-4">
-                                  <p className="text-2xl font-bold text-primary">
-                                    {outcome.probability}%
-                                  </p>
-                                  <div className="w-24 bg-background rounded-full h-2">
+                            {(() => {
+                              console.log('=== DEBUG MARKING GROUPING ===');
+                              console.log('Results genotypes:', results.genotypes);
+                              
+                              // Agrupar por marcação e somar as probabilidades
+                              const groupedByMarking = results.genotypes.reduce((acc, outcome) => {
+                                console.log('Processing outcome:', outcome);
+                                console.log('Marking genotype:', outcome.markingGenotype);
+                                
+                                // Determinar o tipo de marcação baseado no genótipo
+                                let marking = "Self"; // Default
+                                if (outcome.markingGenotype === "hh") {
+                                  marking = "Hooded";
+                                } else if (outcome.markingGenotype === "Hh") {
+                                  marking = "Berkshire";
+                                } else if (outcome.markingGenotype === "Hi/hi") {
+                                  marking = "Irish";
+                                } else if (outcome.markingGenotype === "Hz/hz") {
+                                  marking = "Blaze";
+                                } else if (outcome.markingGenotype === "Hv/hv") {
+                                  marking = "Variegated";
+                                } else if (outcome.markingGenotype === "H-" || outcome.markingGenotype === "H") {
+                                  marking = "Self";
+                                } else if (outcome.markingGenotype) {
+                                  marking = outcome.markingGenotype; // Use the genotype as fallback
+                                }
+                                
+                                console.log('Marking determined:', marking);
+                                
+                                if (!acc[marking]) {
+                                  acc[marking] = {
+                                    marking,
+                                    totalProbability: 0,
+                                    genotypes: []
+                                  };
+                                }
+                                acc[marking].totalProbability += outcome.probability;
+                                acc[marking].genotypes.push(outcome.markingGenotype);
+                                return acc;
+                              }, {} as Record<string, { marking: string; totalProbability: number; genotypes: string[] }>);
+                              
+                              console.log('Grouped by marking:', groupedByMarking);
+                              console.log('===============================================');
+
+                              return Object.values(groupedByMarking)
+                                .sort((a, b) => b.totalProbability - a.totalProbability)
+                                .map((group, index) => {
+                                  // Normalizar a probabilidade para garantir que não exceda 100%
+                                  const normalizedProbability = Math.min(group.totalProbability, 100);
+                                  
+                                  return (
                                     <div
-                                      className="h-full bg-primary rounded-full"
-                                      style={{ width: `${outcome.probability}%` }}
-                                    />
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
+                                      key={index}
+                                      className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+                                    >
+                                      <div className="flex-1">
+                                        <p className="font-medium">{group.marking}</p>
+                                        <p className="text-sm text-muted-foreground">
+                                          Genótipo: {group.genotypes[0]}
+                                        </p>
+                                      </div>
+                                      <div className="text-right">
+                                        <p className="text-2xl font-bold text-primary">
+                                          {Math.round(normalizedProbability * 10) / 10}%
+                                        </p>
+                                        <div className="w-24 bg-background rounded-full h-2 mt-1">
+                                          <div
+                                            className="h-full bg-primary rounded-full transition-all"
+                                            style={{ width: `${normalizedProbability}%` }}
+                                          />
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                });
+                            })()}
                           </div>
+                        ) : (
+                          <p className="text-center text-muted-foreground">
+                            Genótipos não informados para os pais selecionados
+                          </p>
                         )}
                       </CardContent>
                     </Card>

@@ -1,24 +1,43 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Rat } from "@/types/rat";
 import { formatAge } from "@/utils/ageCalculator";
-import { Calendar, Heart, Star, Dna, Activity, Edit } from "lucide-react";
+import { Calendar, Heart, Dna, Activity, Edit, Trash2, FileText, Trees } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-import { PedigreeTree } from "./PedigreeTree";
+import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 interface RatDetailsDialogProps {
   rat: Rat | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onEdit: (rat: Rat) => void;
+  onDelete: (ratId: string) => void;
   allRats: Rat[];
+  onShowPedigree?: (rat: Rat) => void;
+  onShowTree?: (rat: Rat) => void;
 }
 
-export function RatDetailsDialog({ rat, open, onOpenChange, onEdit, allRats }: RatDetailsDialogProps) {
+export function RatDetailsDialog({ rat, open, onOpenChange, onEdit, onDelete, allRats, onShowPedigree, onShowTree }: RatDetailsDialogProps) {
+  const navigate = useNavigate();
+  
   if (!rat) return null;
 
-  const temperamentScores = rat.temperamentScores;
+  console.log('RatDetailsDialog renderizando:', rat.name);
+  
+  const handleViewPedigree = () => {
+    if (onShowPedigree) {
+      onShowPedigree(rat);
+    }
+  };
+
+  const handleViewTree = () => {
+    if (onShowTree) {
+      onShowTree(rat);
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -28,23 +47,71 @@ export function RatDetailsDialog({ rat, open, onOpenChange, onEdit, allRats }: R
             <DialogTitle className="text-2xl flex items-center gap-2">
               {rat.name}
               {rat.breedingApproved && (
-                <Badge className="bg-gradient-to-r from-primary to-accent border-0">
+                <Badge className="text-white border-0" style={{ backgroundColor: '#ff9a9e' }}>
                   <Heart className="w-3 h-3 mr-1" />
                   Reprodutor
                 </Badge>
               )}
             </DialogTitle>
             <div className="flex gap-2">
-              <PedigreeTree rat={rat} allRats={allRats} />
               <Button variant="outline" size="sm" onClick={() => onEdit(rat)}>
                 <Edit className="w-4 h-4 mr-2" />
                 Editar
               </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" size="sm">
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Excluir
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Tem certeza que deseja excluir {rat.name}? Esta ação não pode ser desfeita.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => {
+                        onDelete(rat.id);
+                        onOpenChange(false);
+                        toast.success(`${rat.name} foi excluído com sucesso!`);
+                      }}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Excluir
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           </div>
         </DialogHeader>
 
         <div className="space-y-6">
+          {/* Botões */}
+          <div className="grid grid-cols-2 gap-4">
+            <Button
+              onClick={handleViewPedigree}
+              className="text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2"
+              style={{ backgroundColor: '#c4a3ff' }}
+            >
+              <FileText className="h-5 w-5" />
+              Certificado
+            </Button>
+            <Button
+              onClick={handleViewTree}
+              variant="outline"
+              className="px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2"
+            >
+              <Trees className="h-5 w-5" />
+              Árvore Genealógica
+            </Button>
+          </div>
+
           {/* Informações Básicas */}
           <div className="space-y-3">
             <h3 className="font-semibold text-lg flex items-center gap-2">
@@ -57,10 +124,6 @@ export function RatDetailsDialog({ rat, open, onOpenChange, onEdit, allRats }: R
                 <p className="font-medium">{formatAge(rat.dateOfBirth)}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Data de Nascimento</p>
-                <p className="font-medium">{new Date(rat.dateOfBirth).toLocaleDateString('pt-BR')}</p>
-              </div>
-              <div>
                 <p className="text-sm text-muted-foreground">Sexo</p>
                 <p className="font-medium">{rat.sex}</p>
               </div>
@@ -68,42 +131,52 @@ export function RatDetailsDialog({ rat, open, onOpenChange, onEdit, allRats }: R
                 <p className="text-sm text-muted-foreground">Origem</p>
                 <p className="font-medium">{rat.origin}</p>
               </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Destino</p>
+                <p className="font-medium">{rat.destination}</p>
+              </div>
+              {rat.tutorName && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Nome do Tutor</p>
+                  <p className="font-medium">{rat.tutorName}</p>
+                </div>
+              )}
+              {rat.litterName && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Ninhada</p>
+                  <p className="font-medium">{rat.litterName}</p>
+                </div>
+              )}
             </div>
           </div>
 
           {/* Características Físicas */}
           <div className="space-y-3">
             <h3 className="font-semibold text-lg flex items-center gap-2">
-              <Activity className="w-5 h-5" />
+              <Dna className="w-5 h-5" />
               Características Físicas
             </h3>
             <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
               <div>
-                <p className="text-sm text-muted-foreground">Tipo de Pelagem</p>
-                <p className="font-medium">{rat.coatType}</p>
+                <p className="text-sm text-muted-foreground">Cor da Pelagem</p>
+                <p className="font-medium">{rat.coatColor}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Cor</p>
-                <p className="font-medium">{rat.coatColor}</p>
+                <p className="text-sm text-muted-foreground">Tipo de Pelagem</p>
+                <p className="font-medium">{rat.coatType}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Marcação</p>
                 <p className="font-medium">{rat.marking}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Olhos</p>
+                <p className="text-sm text-muted-foreground">Cor dos Olhos</p>
                 <p className="font-medium">{rat.eyeColor}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Orelhas</p>
+                <p className="text-sm text-muted-foreground">Tipo de Orelha</p>
                 <p className="font-medium">{rat.earType}</p>
               </div>
-              {rat.specialMarks && (
-                <div className="col-span-2">
-                  <p className="text-sm text-muted-foreground">Marcas Especiais</p>
-                  <p className="font-medium">{rat.specialMarks}</p>
-                </div>
-              )}
             </div>
           </div>
 
@@ -111,94 +184,97 @@ export function RatDetailsDialog({ rat, open, onOpenChange, onEdit, allRats }: R
           <div className="space-y-3">
             <h3 className="font-semibold text-lg flex items-center gap-2">
               <Dna className="w-5 h-5" />
-              Genética e Reprodução
+              Genética
             </h3>
             <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
               {rat.genotype && (
                 <div>
-                  <p className="text-sm text-muted-foreground">Genótipo</p>
-                  <p className="font-medium font-mono">{rat.genotype}</p>
+                  <p className="text-sm text-muted-foreground">Genótipo Completo</p>
+                  <p className="font-medium">{rat.genotype}</p>
                 </div>
               )}
-              {rat.inbreedingCoefficient !== undefined && (
+              {rat.colorGenotype && (
                 <div>
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Coeficiente de Inbreeding: {rat.inbreedingCoefficient}%
-                  </p>
-                  <Progress value={rat.inbreedingCoefficient} className="h-2" />
+                  <p className="text-sm text-muted-foreground">Genótipo da Cor</p>
+                  <p className="font-medium">{rat.colorGenotype}</p>
                 </div>
               )}
-              {rat.deformities && (
+              {rat.eyeGenotype && (
                 <div>
-                  <p className="text-sm text-muted-foreground">Deformidades</p>
-                  <p className="font-medium">{rat.deformities}</p>
+                  <p className="text-sm text-muted-foreground">Genótipo dos Olhos</p>
+                  <p className="font-medium">{rat.eyeGenotype}</p>
+                </div>
+              )}
+              {rat.earGenotype && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Genótipo das Orelhas</p>
+                  <p className="font-medium">{rat.earGenotype}</p>
+                </div>
+              )}
+              {rat.coatGenotype && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Genótipo da Pelagem</p>
+                  <p className="font-medium">{rat.coatGenotype}</p>
+                </div>
+              )}
+              {rat.markingGenotype && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Genótipo da Marcação</p>
+                  <p className="font-medium">{rat.markingGenotype}</p>
+                </div>
+              )}
+              {rat.inbreedingCoefficient !== undefined && rat.inbreedingCoefficient > 0 && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Coeficiente de Endogamia</p>
+                  <div className="flex items-center gap-2">
+                    <Progress value={rat.inbreedingCoefficient * 100} className="flex-1" />
+                    <span className="text-sm font-medium">{(rat.inbreedingCoefficient * 100).toFixed(1)}%</span>
+                  </div>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Temperamento */}
-          {temperamentScores && (
+          {/* Reprodução */}
+          <div className="space-y-3">
+            <h3 className="font-semibold text-lg flex items-center gap-2">
+              <Heart className="w-5 h-5" />
+              Reprodução
+            </h3>
+            <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
+              <div>
+                <p className="text-sm text-muted-foreground">Ativo para Reprodução</p>
+                <p className="font-medium">{rat.isBreeder ? "Sim" : "Não"}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Aprovado para Reprodução</p>
+                <p className="font-medium">{rat.breedingApproved ? "Sim" : "Não"}</p>
+              </div>
+              {rat.sex === "Fêmea" && rat.numberOfLitters !== undefined && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Número de Ninhadas</p>
+                  <p className="font-medium">{rat.numberOfLitters}</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Observações */}
+          {rat.temperamentNotes && (
             <div className="space-y-3">
               <h3 className="font-semibold text-lg flex items-center gap-2">
-                <Star className="w-5 h-5" />
-                Temperamento
+                <Activity className="w-5 h-5" />
+                Observações
               </h3>
-              {rat.temperamentNotes && (
-                <p className="text-sm p-4 bg-muted/50 rounded-lg italic">
-                  "{rat.temperamentNotes}"
-                </p>
-              )}
-              <div className="space-y-3 p-4 bg-muted/50 rounded-lg">
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>🌿 Sociabilidade</span>
-                    <span className="font-medium">{temperamentScores.sociability}/5</span>
-                  </div>
-                  <Progress value={temperamentScores.sociability * 20} className="h-2" />
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>💪 Coragem</span>
-                    <span className="font-medium">{temperamentScores.courage}/5</span>
-                  </div>
-                  <Progress value={temperamentScores.courage * 20} className="h-2" />
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>🐭 Curiosidade</span>
-                    <span className="font-medium">{temperamentScores.curiosity}/5</span>
-                  </div>
-                  <Progress value={temperamentScores.curiosity * 20} className="h-2" />
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>🧘‍♂️ Calma</span>
-                    <span className="font-medium">{temperamentScores.calmness}/5</span>
-                  </div>
-                  <Progress value={temperamentScores.calmness * 20} className="h-2" />
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>🧩 Dominância</span>
-                    <span className="font-medium">{temperamentScores.dominance}/5</span>
-                  </div>
-                  <Progress value={temperamentScores.dominance * 20} className="h-2" />
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>❤️ Apego ao Humano</span>
-                    <span className="font-medium">{temperamentScores.humanAttachment}/5</span>
-                  </div>
-                  <Progress value={temperamentScores.humanAttachment * 20} className="h-2" />
-                </div>
+              <div className="p-4 bg-muted/50 rounded-lg">
+                <p className="text-sm">{rat.temperamentNotes}</p>
               </div>
             </div>
           )}
 
           {rat.notes && (
             <div className="space-y-2">
-              <h3 className="font-semibold">Observações</h3>
+              <h3 className="font-semibold">Notas Adicionais</h3>
               <p className="text-sm p-4 bg-muted/50 rounded-lg">{rat.notes}</p>
             </div>
           )}

@@ -8,6 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Rat, CoatType, Marking, EyeColor, EarType, RatStatus, RatDestination } from "@/types/rat";
 import { ratColorDatabase } from "@/data/ratColors";
+import { combineAFRMAGenotypesFromDatabase, getAFRMACharacteristics } from "@/data/afrmaGenetics";
 
 interface EditRatDialogProps {
   rat: Rat;
@@ -52,12 +53,30 @@ export function EditRatDialog({ rat, open, onOpenChange, onSave, allRats }: Edit
             <h3 className="font-semibold text-lg">Informações Básicas</h3>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="name">Nome</Label>
+                <Label htmlFor="name">Nome de Registro</Label>
                 <Input
                   id="name"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   required
+                />
+              </div>
+              <div>
+                <Label htmlFor="tutorName">Nome do Tutor</Label>
+                <Input
+                  id="tutorName"
+                  value={formData.tutorName || ""}
+                  onChange={(e) => setFormData({ ...formData, tutorName: e.target.value })}
+                  placeholder="Nome que o tutor vai dar"
+                />
+              </div>
+              <div>
+                <Label htmlFor="litterName">Nome da Ninhada</Label>
+                <Input
+                  id="litterName"
+                  value={formData.litterName || ""}
+                  onChange={(e) => setFormData({ ...formData, litterName: e.target.value })}
+                  placeholder="Nome da ninhada (para busca)"
                 />
               </div>
               <div>
@@ -132,8 +151,12 @@ export function EditRatDialog({ rat, open, onOpenChange, onSave, allRats }: Edit
                   <SelectContent>
                     <SelectItem value="Reprodução">Reprodução</SelectItem>
                     <SelectItem value="Pet">Pet</SelectItem>
+                    <SelectItem value="À venda">À venda</SelectItem>
+                    <SelectItem value="Para adoção">Para adoção</SelectItem>
                     <SelectItem value="Vendido">Vendido</SelectItem>
                     <SelectItem value="Doado">Doado</SelectItem>
+                    <SelectItem value="Matriz">Matriz (Fêmea reprodutora)</SelectItem>
+                    <SelectItem value="Padreador">Padreador (Macho reprodutor)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -213,7 +236,46 @@ export function EditRatDialog({ rat, open, onOpenChange, onSave, allRats }: Edit
                 <Label htmlFor="coatColor">Cor (Fenótipo)</Label>
                 <Select
                   value={formData.coatColor}
-                  onValueChange={(value) => setFormData({ ...formData, coatColor: value })}
+                  onValueChange={(value) => {
+                    // Buscar cor no banco de dados AFRMA
+                    const selectedColor = ratColorDatabase
+                      .flatMap(group => group.colors)
+                      .find(c => c.name === value);
+                    
+                    if (selectedColor) {
+                      // Obter características automáticas da cor
+                      const characteristics = getAFRMACharacteristics(value);
+                      
+                      // Combinar genótipos usando sistema AFRMA
+                      const genotypes = combineAFRMAGenotypesFromDatabase(
+                        value,
+                        formData.marking,
+                        characteristics.eyeColor || formData.eyeColor,
+                        formData.earType,
+                        formData.coatType
+                      );
+                      
+                      // Atualizar formulário com dados AFRMA
+                      setFormData({ 
+                        ...formData, 
+                        coatColor: value,
+                        genotype: genotypes.completeGenotype,
+                        colorGenotype: genotypes.colorGenotype,
+                        eyeGenotype: genotypes.eyeGenotype,
+                        earGenotype: genotypes.earGenotype,
+                        coatGenotype: genotypes.coatGenotype,
+                        eyeColor: characteristics.eyeColor || formData.eyeColor,
+                        earType: characteristics.earType || formData.earType,
+                        coatType: characteristics.coatType || formData.coatType
+                      });
+                    } else {
+                      // Se não encontrar, apenas atualizar a cor
+                      setFormData({ 
+                        ...formData, 
+                        coatColor: value
+                      });
+                    }
+                  }}
                 >
                   <SelectTrigger id="coatColor">
                     <SelectValue />
@@ -247,15 +309,20 @@ export function EditRatDialog({ rat, open, onOpenChange, onSave, allRats }: Edit
                     <SelectItem value="Self">Self</SelectItem>
                     <SelectItem value="Berkshire">Berkshire</SelectItem>
                     <SelectItem value="Irish">Irish</SelectItem>
+                    <SelectItem value="English Irish">English Irish</SelectItem>
+                    <SelectItem value="Down Under">Down Under</SelectItem>
                     <SelectItem value="Hooded">Hooded</SelectItem>
+                    <SelectItem value="Bareback">Bareback</SelectItem>
+                    <SelectItem value="Capped">Capped</SelectItem>
+                    <SelectItem value="Masked">Masked</SelectItem>
+                    <SelectItem value="Blaze">Blaze</SelectItem>
                     <SelectItem value="Blazed">Blazed</SelectItem>
                     <SelectItem value="Variegated">Variegated</SelectItem>
-                    <SelectItem value="Capped">Capped</SelectItem>
-                    <SelectItem value="Bareback">Bareback</SelectItem>
+                    <SelectItem value="Var-Capped">Var-Capped</SelectItem>
                     <SelectItem value="Essex">Essex</SelectItem>
-                    <SelectItem value="Masked">Masked</SelectItem>
                     <SelectItem value="Dalmatian">Dalmatian</SelectItem>
                     <SelectItem value="Roan">Roan</SelectItem>
+                    <SelectItem value="Marbled">Marbled</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -287,7 +354,6 @@ export function EditRatDialog({ rat, open, onOpenChange, onSave, allRats }: Edit
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Standard">Standard</SelectItem>
                     <SelectItem value="Dumbo">Dumbo</SelectItem>
                     <SelectItem value="Top">Top</SelectItem>
                   </SelectContent>
@@ -393,110 +459,6 @@ export function EditRatDialog({ rat, open, onOpenChange, onSave, allRats }: Edit
                 onChange={(e) => setFormData({ ...formData, temperamentNotes: e.target.value })}
                 placeholder="Observações gerais sobre comportamento"
               />
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <Label htmlFor="sociability">Sociabilidade (1-5)</Label>
-                <Input
-                  id="sociability"
-                  type="number"
-                  min="1"
-                  max="5"
-                  value={formData.temperamentScores?.sociability || ""}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    temperamentScores: {
-                      ...formData.temperamentScores!,
-                      sociability: parseInt(e.target.value) || 1
-                    }
-                  })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="courage">Coragem (1-5)</Label>
-                <Input
-                  id="courage"
-                  type="number"
-                  min="1"
-                  max="5"
-                  value={formData.temperamentScores?.courage || ""}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    temperamentScores: {
-                      ...formData.temperamentScores!,
-                      courage: parseInt(e.target.value) || 1
-                    }
-                  })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="curiosity">Curiosidade (1-5)</Label>
-                <Input
-                  id="curiosity"
-                  type="number"
-                  min="1"
-                  max="5"
-                  value={formData.temperamentScores?.curiosity || ""}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    temperamentScores: {
-                      ...formData.temperamentScores!,
-                      curiosity: parseInt(e.target.value) || 1
-                    }
-                  })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="calmness">Calma (1-5)</Label>
-                <Input
-                  id="calmness"
-                  type="number"
-                  min="1"
-                  max="5"
-                  value={formData.temperamentScores?.calmness || ""}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    temperamentScores: {
-                      ...formData.temperamentScores!,
-                      calmness: parseInt(e.target.value) || 1
-                    }
-                  })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="dominance">Dominância (1-5)</Label>
-                <Input
-                  id="dominance"
-                  type="number"
-                  min="1"
-                  max="5"
-                  value={formData.temperamentScores?.dominance || ""}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    temperamentScores: {
-                      ...formData.temperamentScores!,
-                      dominance: parseInt(e.target.value) || 1
-                    }
-                  })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="humanAttachment">Apego ao Humano (1-5)</Label>
-                <Input
-                  id="humanAttachment"
-                  type="number"
-                  min="1"
-                  max="5"
-                  value={formData.temperamentScores?.humanAttachment || ""}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    temperamentScores: {
-                      ...formData.temperamentScores!,
-                      humanAttachment: parseInt(e.target.value) || 1
-                    }
-                  })}
-                />
-              </div>
             </div>
           </div>
 

@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Fundo -->
+  <rect width="100" height="100" fill="#000000"/>
+  
+  <!-- Poké Ball -->
+  <g transform="translate(50,50)">
+    <!-- Banda central preta -->
+    <rect x="-40" y="-5" width="80" height="10" fill="#000000"/>
+    
+    <!-- Parte vermelha superior com gradiente -->
+    <defs>
+      <linearGradient id="redGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" style="stop-color:#FF5A5A;stop-opacity:1" />
+        <stop offset="100%" style="stop-color:#CC0000;stop-opacity:1" />
+      </linearGradient>
+    </defs>
+    
+    <circle cx="0" cy="0" r="35" fill="none" stroke="#000000" stroke-width="2"/>
+    <path d="M -35,0 A 35,35 0 0,1 -35,-35 A 35,35 0 0,1 35,-35 A 35,35 0 0,1 35,0 Z" fill="url(#redGradient)"/>
+    <path d="M -35,0 A 35,35 0 0,1 -35,-35 A 35,35 0 0,1 35,-35 A 35,35 0 0,1 35,0 Z" fill="none" stroke="#8B0000" stroke-width="1"/>
+    
+    <!-- Parte branca inferior -->
+    <path d="M -35,0 A 35,35 0 0,0 -35,35 A 35,35 0 0,0 35,35 A 35,35 0 0,0 35,0 Z" fill="#FFFFFF"/>
+    <path d="M -35,0 A 35,35 0 0,0 -35,35 A 35,35 0 0,0 35,35 A 35,35 0 0,0 35,0 Z" fill="none" stroke="#E0E0E0" stroke-width="1"/>
+    
+    <!-- Banda preta central -->
+    <rect x="-40" y="-5" width="80" height="10" fill="#000000"/>
+    
+    <!-- Botão central branco -->
+    <circle cx="0" cy="0" r="9" fill="#FFFFFF"/>
+    <circle cx="0" cy="0" r="9" fill="none" stroke="#000000" stroke-width="0.5"/>
+    <circle cx="0" cy="0" r="6" fill="#4A4A4A"/>
+    <circle cx="-1.5" cy="-1.5" r="2.5" fill="#FFFFFF" opacity="0.7"/>
+    <circle cx="0" cy="0" r="6" fill="none" stroke="#000000" stroke-width="0.3"/>
+  </g>
+</svg>

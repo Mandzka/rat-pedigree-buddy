@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useState, useEffect } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,16 +11,24 @@ import { Rat, CoatType, Marking, EyeColor, EarType, RatStatus, RatDestination } 
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { ratColorDatabase } from "@/data/ratColors";
+import { combineAFRMAGenotypesFromDatabase, getAFRMACharacteristics, afrmaCoatGenotypes, afrmaEarGenotypes, afrmaEyeGenotypes } from "@/data/afrmaGenetics";
+import { calculateInbreedingCoefficient } from "@/utils/inbreedingCalculator";
 
 interface AddRatDialogProps {
   onAddRat: (rat: Rat) => void;
   allRats: Rat[];
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function AddRatDialog({ onAddRat, allRats }: AddRatDialogProps) {
-  const [open, setOpen] = useState(false);
+export function AddRatDialog({ onAddRat, allRats, open: externalOpen, onOpenChange }: AddRatDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = externalOpen !== undefined ? externalOpen : internalOpen;
+  const setOpen = onOpenChange || setInternalOpen;
   const [formData, setFormData] = useState({
     name: "",
+    tutorName: "",
+    litterName: "",
     dateOfBirth: "",
     dateOfDeath: "",
     sex: "Macho" as "Macho" | "Fêmea",
@@ -28,15 +36,20 @@ export function AddRatDialog({ onAddRat, allRats }: AddRatDialogProps) {
     status: "Vivo" as RatStatus,
     destination: "Reprodução" as RatDestination,
     isBreeder: false,
-    motherId: "",
-    fatherId: "",
+    motherId: undefined,
+    fatherId: undefined,
     coatType: "Standard" as CoatType,
     coatColor: "",
     marking: "Self" as Marking,
     eyeColor: "Preto" as EyeColor,
-    earType: "Standard" as EarType,
+    earType: "Dumbo" as EarType,
     specialMarks: "",
     genotype: "",
+    colorGenotype: "",
+    eyeGenotype: "",
+    earGenotype: "",
+    coatGenotype: "",
+    markingGenotype: "",
     carrierGenes: "",
     geneticNotes: "",
     deformities: "",
@@ -44,15 +57,82 @@ export function AddRatDialog({ onAddRat, allRats }: AddRatDialogProps) {
     inbreedingCoefficient: 0,
     numberOfLitters: 0,
     temperamentNotes: "",
-    sociability: 3,
-    courage: 3,
-    curiosity: 3,
-    calmness: 3,
-    dominance: 3,
-    humanAttachment: 3,
     notes: "",
     registrationNumber: "",
   });
+
+  // Função para calcular coeficiente de inbreeding automaticamente
+  const calculateInbreeding = (motherId?: string, fatherId?: string) => {
+    if (!motherId || !fatherId || motherId === "unknown" || fatherId === "unknown") {
+      console.log('COI Debug: Pais não selecionados ou desconhecidos');
+      return 0;
+    }
+    
+    const mother = allRats.find(r => r.id === motherId);
+    const father = allRats.find(r => r.id === fatherId);
+    
+    if (!mother || !father) {
+      console.log('COI Debug: Mãe ou pai não encontrados');
+      return 0;
+    }
+    
+    try {
+      // Criar um rato temporário para calcular o COI
+      const tempRat: Rat = {
+        id: 'temp',
+        name: 'temp',
+        dateOfBirth: new Date().toISOString(),
+        sex: 'Macho',
+        origin: 'Nascido na Rattery',
+        status: 'Vivo',
+        destination: 'Reprodução',
+        isBreeder: false,
+        motherId: motherId,
+        fatherId: fatherId,
+        coatType: 'Standard',
+        coatColor: '',
+        marking: 'Self',
+        eyeColor: 'Preto',
+        earType: 'Dumbo',
+        breedingApproved: false,
+        photos: [],
+        litterIds: [],
+        offspringIds: []
+      };
+      
+      const coi = calculateInbreedingCoefficient(tempRat, allRats);
+      console.log('=== DEBUG COI ===');
+      console.log('Mãe:', mother.name);
+      console.log('Pai:', father.name);
+      console.log('COI calculado:', coi);
+      console.log('=================');
+      return coi;
+    } catch (error) {
+      console.error('Erro ao calcular coeficiente de inbreeding:', error);
+      return 0;
+    }
+  };
+
+  // Função para combinar genótipos separados
+  const combineGenotypes = () => {
+    const parts = [
+      formData.colorGenotype,
+      formData.markingGenotype,
+      formData.eyeGenotype,
+      formData.earGenotype,
+      formData.coatGenotype
+    ].filter(part => part && part.trim());
+    
+    return parts.join(' ');
+  };
+
+  // Atualizar genótipo completo quando os separados mudarem
+  useEffect(() => {
+    const combined = combineGenotypes();
+    if (combined && combined !== formData.genotype) {
+      setFormData(prev => ({ ...prev, genotype: combined }));
+    }
+  }, [formData.colorGenotype, formData.markingGenotype, formData.eyeGenotype, formData.earGenotype, formData.coatGenotype]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,8 +152,8 @@ export function AddRatDialog({ onAddRat, allRats }: AddRatDialogProps) {
       status: formData.status,
       destination: formData.destination,
       isBreeder: formData.isBreeder,
-      motherId: formData.motherId || undefined,
-      fatherId: formData.fatherId || undefined,
+      motherId: formData.motherId,
+      fatherId: formData.fatherId,
       coatType: formData.coatType,
       coatColor: formData.coatColor,
       marking: formData.marking,
@@ -81,6 +161,11 @@ export function AddRatDialog({ onAddRat, allRats }: AddRatDialogProps) {
       earType: formData.earType,
       specialMarks: formData.specialMarks || undefined,
       genotype: formData.genotype || undefined,
+      colorGenotype: formData.colorGenotype || undefined,
+      eyeGenotype: formData.eyeGenotype || undefined,
+      earGenotype: formData.earGenotype || undefined,
+      coatGenotype: formData.coatGenotype || undefined,
+      markingGenotype: formData.markingGenotype || undefined,
       carrierGenes: formData.carrierGenes || undefined,
       geneticNotes: formData.geneticNotes || undefined,
       deformities: formData.deformities || undefined,
@@ -88,14 +173,6 @@ export function AddRatDialog({ onAddRat, allRats }: AddRatDialogProps) {
       inbreedingCoefficient: formData.inbreedingCoefficient,
       numberOfLitters: formData.numberOfLitters,
       temperamentNotes: formData.temperamentNotes || undefined,
-      temperamentScores: {
-        sociability: formData.sociability,
-        courage: formData.courage,
-        curiosity: formData.curiosity,
-        calmness: formData.calmness,
-        dominance: formData.dominance,
-        humanAttachment: formData.humanAttachment,
-      },
       notes: formData.notes || undefined,
       registrationNumber: formData.registrationNumber || undefined,
     };
@@ -107,6 +184,8 @@ export function AddRatDialog({ onAddRat, allRats }: AddRatDialogProps) {
     // Reset form
     setFormData({
       name: "",
+      tutorName: "",
+      litterName: "",
       dateOfBirth: "",
       dateOfDeath: "",
       sex: "Macho",
@@ -114,15 +193,20 @@ export function AddRatDialog({ onAddRat, allRats }: AddRatDialogProps) {
       status: "Vivo",
       destination: "Reprodução",
       isBreeder: false,
-      motherId: "",
-      fatherId: "",
+      motherId: undefined,
+      fatherId: undefined,
       coatType: "Standard",
       coatColor: "",
       marking: "Self",
       eyeColor: "Preto",
-      earType: "Standard",
+      earType: "Dumbo",
       specialMarks: "",
       genotype: "",
+      colorGenotype: "",
+      eyeGenotype: "",
+      earGenotype: "",
+      coatGenotype: "",
+      markingGenotype: "",
       carrierGenes: "",
       geneticNotes: "",
       deformities: "",
@@ -130,12 +214,6 @@ export function AddRatDialog({ onAddRat, allRats }: AddRatDialogProps) {
       inbreedingCoefficient: 0,
       numberOfLitters: 0,
       temperamentNotes: "",
-      sociability: 3,
-      courage: 3,
-      curiosity: 3,
-      calmness: 3,
-      dominance: 3,
-      humanAttachment: 3,
       notes: "",
       registrationNumber: "",
     });
@@ -143,12 +221,6 @@ export function AddRatDialog({ onAddRat, allRats }: AddRatDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size="lg" className="shadow-lg">
-          <Plus className="w-5 h-5 mr-2" />
-          Adicionar Rato
-        </Button>
-      </DialogTrigger>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl">Adicionar Novo Rato</DialogTitle>
@@ -159,12 +231,30 @@ export function AddRatDialog({ onAddRat, allRats }: AddRatDialogProps) {
             <h3 className="font-semibold text-lg border-b pb-2">Informações Básicas</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Nome *</Label>
+                <Label htmlFor="name">Nome de Registro *</Label>
                 <Input
                   id="name"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Nome do rato"
+                  placeholder="Nome de registro do rato"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="tutorName">Nome do Tutor</Label>
+                <Input
+                  id="tutorName"
+                  value={formData.tutorName || ""}
+                  onChange={(e) => setFormData({ ...formData, tutorName: e.target.value })}
+                  placeholder="Nome que o tutor vai dar"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="litterName">Nome da Ninhada</Label>
+                <Input
+                  id="litterName"
+                  value={formData.litterName || ""}
+                  onChange={(e) => setFormData({ ...formData, litterName: e.target.value })}
+                  placeholder="Nome da ninhada (para busca)"
                 />
               </div>
               <div className="space-y-2">
@@ -173,14 +263,25 @@ export function AddRatDialog({ onAddRat, allRats }: AddRatDialogProps) {
                   id="dateOfBirth"
                   type="date"
                   value={formData.dateOfBirth}
-                  onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    // Validar que o ano tem no máximo 4 dígitos
+                    if (value && value.length > 0) {
+                      const parts = value.split('-');
+                      if (parts[0] && parts[0].length > 4) {
+                        return; // Não permitir mais de 4 dígitos no ano
+                      }
+                    }
+                    setFormData({ ...formData, dateOfBirth: value });
+                  }}
+                  max="9999-12-31"
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="sex">Sexo</Label>
-                <Select value={formData.sex} onValueChange={(value: any) => setFormData({ ...formData, sex: value })}>
-                  <SelectTrigger>
-                    <SelectValue />
+                <Select value={formData.sex} onValueChange={(value: "Macho" | "Fêmea") => setFormData({ ...formData, sex: value })}>
+                  <SelectTrigger id="sex">
+                    <SelectValue placeholder="Selecione o sexo" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Macho">Macho</SelectItem>
@@ -190,21 +291,23 @@ export function AddRatDialog({ onAddRat, allRats }: AddRatDialogProps) {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="origin">Origem</Label>
-                <Select value={formData.origin} onValueChange={(value: any) => setFormData({ ...formData, origin: value })}>
-                  <SelectTrigger>
-                    <SelectValue />
+                <Select value={formData.origin} onValueChange={(value: "Nascido na Rattery" | "Comprado" | "Doado" | "Outro") => setFormData({ ...formData, origin: value })}>
+                  <SelectTrigger id="origin">
+                    <SelectValue placeholder="Selecione a origem" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Nascido na Rattery">Nascido na Rattery</SelectItem>
                     <SelectItem value="Comprado">Comprado</SelectItem>
+                    <SelectItem value="Doado">Doado</SelectItem>
+                    <SelectItem value="Outro">Outro</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="status">Status</Label>
                 <Select value={formData.status} onValueChange={(value: RatStatus) => setFormData({ ...formData, status: value })}>
-                  <SelectTrigger>
-                    <SelectValue />
+                  <SelectTrigger id="status">
+                    <SelectValue placeholder="Selecione o status" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Vivo">Vivo</SelectItem>
@@ -216,14 +319,18 @@ export function AddRatDialog({ onAddRat, allRats }: AddRatDialogProps) {
               <div className="space-y-2">
                 <Label htmlFor="destination">Destino</Label>
                 <Select value={formData.destination} onValueChange={(value: RatDestination) => setFormData({ ...formData, destination: value })}>
-                  <SelectTrigger>
-                    <SelectValue />
+                  <SelectTrigger id="destination">
+                    <SelectValue placeholder="Selecione o destino" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Reprodução">Reprodução</SelectItem>
                     <SelectItem value="Pet">Pet</SelectItem>
+                    <SelectItem value="À venda">À venda</SelectItem>
+                    <SelectItem value="Para adoção">Para adoção</SelectItem>
                     <SelectItem value="Vendido">Vendido</SelectItem>
                     <SelectItem value="Doado">Doado</SelectItem>
+                    <SelectItem value="Matriz">Matriz (Fêmea reprodutora)</SelectItem>
+                    <SelectItem value="Padreador">Padreador (Macho reprodutor)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -234,7 +341,18 @@ export function AddRatDialog({ onAddRat, allRats }: AddRatDialogProps) {
                     id="dateOfDeath"
                     type="date"
                     value={formData.dateOfDeath}
-                    onChange={(e) => setFormData({ ...formData, dateOfDeath: e.target.value })}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      // Validar que o ano tem no máximo 4 dígitos
+                      if (value && value.length > 0) {
+                        const parts = value.split('-');
+                        if (parts[0] && parts[0].length > 4) {
+                          return; // Não permitir mais de 4 dígitos no ano
+                        }
+                      }
+                      setFormData({ ...formData, dateOfDeath: value });
+                    }}
+                    max="9999-12-31"
                   />
                 </div>
               )}
@@ -266,12 +384,20 @@ export function AddRatDialog({ onAddRat, allRats }: AddRatDialogProps) {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="mother">Mãe</Label>
-                <Select value={formData.motherId} onValueChange={(value) => setFormData({ ...formData, motherId: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Desconhecido" />
+                <Select value={formData.motherId || ""} onValueChange={(value) => {
+                  const newMotherId = value === "unknown" ? undefined : value;
+                  const inbreedingCoeff = calculateInbreeding(newMotherId, formData.fatherId);
+                  setFormData({ 
+                    ...formData, 
+                    motherId: newMotherId,
+                    inbreedingCoefficient: inbreedingCoeff
+                  });
+                }}>
+                  <SelectTrigger id="mother">
+                    <SelectValue placeholder="Selecione a mãe" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Desconhecido</SelectItem>
+                    <SelectItem value="unknown">Desconhecido</SelectItem>
                     {allRats.filter(r => r.sex === "Fêmea").map(r => (
                       <SelectItem key={r.id} value={r.id}>{r.name} - {r.coatColor}</SelectItem>
                     ))}
@@ -280,12 +406,20 @@ export function AddRatDialog({ onAddRat, allRats }: AddRatDialogProps) {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="father">Pai</Label>
-                <Select value={formData.fatherId} onValueChange={(value) => setFormData({ ...formData, fatherId: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Desconhecido" />
+                <Select value={formData.fatherId || ""} onValueChange={(value) => {
+                  const newFatherId = value === "unknown" ? undefined : value;
+                  const inbreedingCoeff = calculateInbreeding(formData.motherId, newFatherId);
+                  setFormData({ 
+                    ...formData, 
+                    fatherId: newFatherId,
+                    inbreedingCoefficient: inbreedingCoeff
+                  });
+                }}>
+                  <SelectTrigger id="father">
+                    <SelectValue placeholder="Selecione o pai" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Desconhecido</SelectItem>
+                    <SelectItem value="unknown">Desconhecido</SelectItem>
                     {allRats.filter(r => r.sex === "Macho").map(r => (
                       <SelectItem key={r.id} value={r.id}>{r.name} - {r.coatColor}</SelectItem>
                     ))}
@@ -301,7 +435,26 @@ export function AddRatDialog({ onAddRat, allRats }: AddRatDialogProps) {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="coatType">Tipo de Pelagem</Label>
-                <Select value={formData.coatType} onValueChange={(value: CoatType) => setFormData({ ...formData, coatType: value })}>
+                <Select value={formData.coatType} onValueChange={(value: CoatType) => {
+                  // Atualizar genótipo da pelagem
+                  const coatGenotype = afrmaCoatGenotypes[value as keyof typeof afrmaCoatGenotypes] || "";
+                  
+                  // Recalcular genótipo completo
+                  const genotypes = combineAFRMAGenotypesFromDatabase(
+                    formData.coatColor,
+                    formData.marking,
+                    formData.eyeColor,
+                    formData.earType,
+                    value
+                  );
+                  
+                  setFormData({ 
+                    ...formData, 
+                    coatType: value,
+                    coatGenotype: coatGenotype,
+                    genotype: genotypes.completeGenotype
+                  });
+                }}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -318,12 +471,30 @@ export function AddRatDialog({ onAddRat, allRats }: AddRatDialogProps) {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="earType">Tipo de Orelha</Label>
-                <Select value={formData.earType} onValueChange={(value: EarType) => setFormData({ ...formData, earType: value })}>
+                <Select value={formData.earType} onValueChange={(value: EarType) => {
+                  // Atualizar genótipo da orelha
+                  const earGenotype = afrmaEarGenotypes[value as keyof typeof afrmaEarGenotypes] || "";
+                  
+                  // Recalcular genótipo completo
+                  const genotypes = combineAFRMAGenotypesFromDatabase(
+                    formData.coatColor,
+                    formData.marking,
+                    formData.eyeColor,
+                    value,
+                    formData.coatType
+                  );
+                  
+                  setFormData({ 
+                    ...formData, 
+                    earType: value,
+                    earGenotype: earGenotype,
+                    genotype: genotypes.completeGenotype
+                  });
+                }}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Standard">Standard</SelectItem>
                     <SelectItem value="Dumbo">Dumbo</SelectItem>
                     <SelectItem value="Top">Top</SelectItem>
                   </SelectContent>
@@ -334,14 +505,51 @@ export function AddRatDialog({ onAddRat, allRats }: AddRatDialogProps) {
                 <Select 
                   value={formData.coatColor} 
                   onValueChange={(value) => {
+                    // Buscar cor no banco de dados AFRMA
                     const selectedColor = ratColorDatabase
                       .flatMap(group => group.colors)
                       .find(c => c.name === value);
-                    setFormData({ 
-                      ...formData, 
-                      coatColor: value,
-                      genotype: selectedColor?.genotype || formData.genotype
-                    });
+                    
+                    if (selectedColor) {
+                      // Obter características automáticas da cor
+                      const characteristics = getAFRMACharacteristics(value);
+                      
+                      // Combinar genótipos usando sistema AFRMA
+                      const genotypes = combineAFRMAGenotypesFromDatabase(
+                        value,
+                        formData.marking,
+                        characteristics.eyeColor || formData.eyeColor,
+                        formData.earType,
+                        formData.coatType
+                      );
+                      
+                      console.log('=== DEBUG GENÓTIPOS ===');
+                      console.log('Cor selecionada:', value);
+                      console.log('Cor encontrada no banco:', selectedColor);
+                      console.log('Características AFRMA:', characteristics);
+                      console.log('Genótipos calculados:', genotypes);
+                      console.log('========================');
+                      
+                      // Atualizar formulário com dados AFRMA
+                      setFormData({ 
+                        ...formData, 
+                        coatColor: value,
+                        genotype: genotypes.completeGenotype,
+                        colorGenotype: genotypes.colorGenotype,
+                        eyeGenotype: genotypes.eyeGenotype,
+                        earGenotype: genotypes.earGenotype,
+                        coatGenotype: genotypes.coatGenotype,
+                        eyeColor: characteristics.eyeColor || formData.eyeColor,
+                        earType: characteristics.earType || formData.earType,
+                        coatType: characteristics.coatType || formData.coatType
+                      });
+                    } else {
+                      // Se não encontrar, apenas atualizar a cor
+                      setFormData({ 
+                        ...formData, 
+                        coatColor: value
+                      });
+                    }
                   }}
                 >
                   <SelectTrigger>
@@ -373,21 +581,45 @@ export function AddRatDialog({ onAddRat, allRats }: AddRatDialogProps) {
                     <SelectItem value="Self">Self</SelectItem>
                     <SelectItem value="Berkshire">Berkshire</SelectItem>
                     <SelectItem value="Irish">Irish</SelectItem>
+                    <SelectItem value="English Irish">English Irish</SelectItem>
+                    <SelectItem value="Down Under">Down Under</SelectItem>
                     <SelectItem value="Hooded">Hooded</SelectItem>
+                    <SelectItem value="Bareback">Bareback</SelectItem>
+                    <SelectItem value="Capped">Capped</SelectItem>
+                    <SelectItem value="Masked">Masked</SelectItem>
+                    <SelectItem value="Blaze">Blaze</SelectItem>
                     <SelectItem value="Blazed">Blazed</SelectItem>
                     <SelectItem value="Variegated">Variegated</SelectItem>
-                    <SelectItem value="Capped">Capped</SelectItem>
-                    <SelectItem value="Bareback">Bareback</SelectItem>
+                    <SelectItem value="Var-Capped">Var-Capped</SelectItem>
                     <SelectItem value="Essex">Essex</SelectItem>
-                    <SelectItem value="Masked">Masked</SelectItem>
                     <SelectItem value="Dalmatian">Dalmatian</SelectItem>
                     <SelectItem value="Roan">Roan</SelectItem>
+                    <SelectItem value="Marbled">Marbled</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="eyeColor">Cor dos Olhos</Label>
-                <Select value={formData.eyeColor} onValueChange={(value: EyeColor) => setFormData({ ...formData, eyeColor: value })}>
+                <Select value={formData.eyeColor} onValueChange={(value: EyeColor) => {
+                  // Atualizar genótipo dos olhos
+                  const eyeGenotype = afrmaEyeGenotypes[value as keyof typeof afrmaEyeGenotypes] || "";
+                  
+                  // Recalcular genótipo completo
+                  const genotypes = combineAFRMAGenotypesFromDatabase(
+                    formData.coatColor,
+                    formData.marking,
+                    value,
+                    formData.earType,
+                    formData.coatType
+                  );
+                  
+                  setFormData({ 
+                    ...formData, 
+                    eyeColor: value,
+                    eyeGenotype: eyeGenotype,
+                    genotype: genotypes.completeGenotype
+                  });
+                }}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -408,8 +640,8 @@ export function AddRatDialog({ onAddRat, allRats }: AddRatDialogProps) {
             <h3 className="font-semibold text-lg border-b pb-2">Genética e Reprodução</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="genotype">
-                  Genótipo
+                <Label htmlFor="colorGenotype">
+                  Genótipo da Cor
                   {formData.coatColor && (
                     <span className="text-xs text-muted-foreground ml-2">
                       (Auto-preenchido)
@@ -417,10 +649,51 @@ export function AddRatDialog({ onAddRat, allRats }: AddRatDialogProps) {
                   )}
                 </Label>
                 <Input
+                  id="colorGenotype"
+                  value={formData.colorGenotype}
+                  onChange={(e) => setFormData({ ...formData, colorGenotype: e.target.value })}
+                  placeholder="Ex: aa BB dd"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="eyeGenotype">Genótipo dos Olhos</Label>
+                <Input
+                  id="eyeGenotype"
+                  value={formData.eyeGenotype}
+                  onChange={(e) => setFormData({ ...formData, eyeGenotype: e.target.value })}
+                  placeholder="Ex: C-, cc, ch"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="earGenotype">Genótipo das Orelhas</Label>
+                <Input
+                  id="earGenotype"
+                  value={formData.earGenotype}
+                  onChange={(e) => setFormData({ ...formData, earGenotype: e.target.value })}
+                  placeholder="Ex: du, to"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="coatGenotype">Genótipo da Pelagem</Label>
+                <Input
+                  id="coatGenotype"
+                  value={formData.coatGenotype}
+                  onChange={(e) => setFormData({ ...formData, coatGenotype: e.target.value })}
+                  placeholder="Ex: rr, sa, hr"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="genotype">
+                  Genótipo Completo
+                  <span className="text-xs text-muted-foreground ml-2">
+                    (Combinação automática)
+                  </span>
+                </Label>
+                <Input
                   id="genotype"
                   value={formData.genotype}
                   onChange={(e) => setFormData({ ...formData, genotype: e.target.value })}
-                  placeholder="Ex: Aa Bb Dd"
+                  placeholder="Ex: aa BB dd C- du rr"
                 />
               </div>
               <div className="space-y-2">
@@ -440,8 +713,10 @@ export function AddRatDialog({ onAddRat, allRats }: AddRatDialogProps) {
                   min="0"
                   max="100"
                   value={formData.inbreedingCoefficient}
-                  onChange={(e) => setFormData({ ...formData, inbreedingCoefficient: parseFloat(e.target.value) })}
+                  readOnly
+                  className="bg-gray-50"
                 />
+                <p className="text-xs text-gray-500">Calculado automaticamente baseado nos pais selecionados</p>
               </div>
               {formData.sex === "Fêmea" && (
                 <div className="space-y-2">
@@ -507,86 +782,6 @@ export function AddRatDialog({ onAddRat, allRats }: AddRatDialogProps) {
                   onChange={(e) => setFormData({ ...formData, temperamentNotes: e.target.value })}
                   placeholder="Ex: Calmo e curioso, adora interagir com pessoas, não morde."
                 />
-              </div>
-              <div className="space-y-3">
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <Label>🌿 Sociabilidade</Label>
-                    <span className="text-sm text-muted-foreground">{formData.sociability}/5</span>
-                  </div>
-                  <Slider
-                    value={[formData.sociability]}
-                    onValueChange={([value]) => setFormData({ ...formData, sociability: value })}
-                    min={1}
-                    max={5}
-                    step={1}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <Label>💪 Coragem</Label>
-                    <span className="text-sm text-muted-foreground">{formData.courage}/5</span>
-                  </div>
-                  <Slider
-                    value={[formData.courage]}
-                    onValueChange={([value]) => setFormData({ ...formData, courage: value })}
-                    min={1}
-                    max={5}
-                    step={1}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <Label>🐭 Curiosidade</Label>
-                    <span className="text-sm text-muted-foreground">{formData.curiosity}/5</span>
-                  </div>
-                  <Slider
-                    value={[formData.curiosity]}
-                    onValueChange={([value]) => setFormData({ ...formData, curiosity: value })}
-                    min={1}
-                    max={5}
-                    step={1}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <Label>🧘‍♂️ Calma</Label>
-                    <span className="text-sm text-muted-foreground">{formData.calmness}/5</span>
-                  </div>
-                  <Slider
-                    value={[formData.calmness]}
-                    onValueChange={([value]) => setFormData({ ...formData, calmness: value })}
-                    min={1}
-                    max={5}
-                    step={1}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <Label>🧩 Dominância</Label>
-                    <span className="text-sm text-muted-foreground">{formData.dominance}/5</span>
-                  </div>
-                  <Slider
-                    value={[formData.dominance]}
-                    onValueChange={([value]) => setFormData({ ...formData, dominance: value })}
-                    min={1}
-                    max={5}
-                    step={1}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <Label>❤️ Apego ao Humano</Label>
-                    <span className="text-sm text-muted-foreground">{formData.humanAttachment}/5</span>
-                  </div>
-                  <Slider
-                    value={[formData.humanAttachment]}
-                    onValueChange={([value]) => setFormData({ ...formData, humanAttachment: value })}
-                    min={1}
-                    max={5}
-                    step={1}
-                  />
-                </div>
               </div>
             </div>
           </div>
